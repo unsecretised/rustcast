@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 anyhow = "1.0.100"
+applications = "0.3.1"
 global-hotkey = "0.7.0"
 iced = { version = "0.14.0", features = ["smol", "tokio"] }
 objc2 = "0.6.3"
@@ -15,7 +16,7 @@ tokio = { version = "1.48.0", features = ["full"] }
 [package.metadata.bundle]
 name = "RustCast"
 identifier = "com.umangsurana.rustcast"
-icon = ["assets/icon.icns"]
+icon = ["bundling/icon.icns"]
 version = "1.0.0"
 resources = []
 copyright = "Copyright Umang Surana (c) 2025"

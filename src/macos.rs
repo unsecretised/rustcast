@@ -1,4 +1,4 @@
-// ------ MacOS Configuration functions --------
+#![allow(deprecated)]
 
 #[cfg(target_os = "macos")]
 use iced::wgpu::rwh::WindowHandle;
@@ -11,6 +11,16 @@ pub fn set_activation_policy_accessory() {
     let mtm = MainThreadMarker::new().expect("must be on main thread");
     let app = NSApp(mtm);
     app.setActivationPolicy(NSApplicationActivationPolicy::Accessory);
+}
+
+#[cfg(target_os = "macos")]
+pub fn set_activation_policy_regular() {
+    use objc2::MainThreadMarker;
+    use objc2_app_kit::{NSApp, NSApplicationActivationPolicy};
+
+    let mtm = MainThreadMarker::new().expect("must be on main thread");
+    let app = NSApp(mtm);
+    app.setActivationPolicy(NSApplicationActivationPolicy::Regular);
 }
 
 #[cfg(target_os = "macos")]
@@ -38,3 +48,16 @@ pub fn macos_window_config(handle: &WindowHandle) {
         }
     }
 }
+
+#[cfg(target_os = "macos")]
+pub fn focus_this_app() {
+    use objc2::MainThreadMarker;
+    use objc2_app_kit::NSApp;
+
+    let mtm = MainThreadMarker::new().expect("must be on main thread");
+    let app = NSApp(mtm);
+
+    app.setActivationPolicy(objc2_app_kit::NSApplicationActivationPolicy::Regular);
+    app.activateIgnoringOtherApps(true);
+}
+
