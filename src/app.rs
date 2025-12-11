@@ -326,15 +326,9 @@ impl Tile {
             window::close_events().map(Message::HideWindow),
             window::resize_events().map(|_| Message::_Nothing),
             keyboard::listen().filter_map(|event| {
-                #[allow(unused)]
                 if let keyboard::Event::KeyPressed {
                     key,
-                    modified_key,
-                    physical_key,
-                    location,
-                    modifiers,
-                    text,
-                    repeat,
+                    ..
                 } = event
                 {
                     match key {
