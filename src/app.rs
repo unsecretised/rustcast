@@ -1,5 +1,5 @@
 use crate::config::Config;
-use crate::macos::focus_this_app;
+use crate::macos::{focus_this_app, transform_process_to_ui_element};
 use crate::{macos, utils::get_installed_apps};
 
 use global_hotkey::{GlobalHotKeyEvent, HotKeyState};
@@ -135,11 +135,14 @@ impl Tile {
     /// A base window
     pub fn new(keybind_id: u32, config: &Config) -> (Self, Task<Message>) {
         let (id, open) = window::open(default_settings());
-        let _ = window::run(id, |handle| {
+
+        let open = open.discard().chain(window::run(id, |handle| {
             macos::macos_window_config(
                 &handle.window_handle().expect("Unable to get window handle"),
             );
-        });
+            // should work now that we have a window
+            transform_process_to_ui_element();
+        }));
 
         // SHOULD NEVER HAVE NONE VALUES
         let default_config = Config::default();
