@@ -14,4 +14,3 @@ For features, see [The Planned Features in the README](README.md )
 1. All code must be formatted with `cargo fmt`
 1. Code must not be malicious or be intended to harm someones device
 1. All features added must work as intended
-1. Submit your PRs to the dev branch, and not main
