@@ -3,6 +3,7 @@
 toggle_mod = "ALT"
 toggle_key = "Space"
 placeholder = "Time to be productive!"
+search_url = "https://google.com/search?q=%s"
 
 [buffer_rules]
 clear_on_hide = true

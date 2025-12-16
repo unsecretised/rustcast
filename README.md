@@ -1,8 +1,8 @@
 # Rustcast - an alternative to Raycast thats open source and in rust
 
-> Rustcast, Raycast and PowerToys are productivity tools. They provide a popup search bar
-> that people can use to do many things, like opening apps, calculators,
-> quick-notes, etc.
+> Rustcast, Raycast and PowerToys are productivity tools. They provide a popup
+> search bar that people can use to do many things, like opening apps,
+> calculators, quick-notes, etc.
 
 ![RustCast Demo PreRelease V1](docs/rustcast-demo-with-v0_1_0.png)
 
@@ -29,10 +29,14 @@ use spotlight :) Have fun!)
    `xattr -cr <RustCast.app directory here>`
 
 ### Build it youself:
+
 1. Clone the repo with `git clone https://gitub.com/unsecretised/rustcast.git`
-1. Install `cargo bundle` with `cargo install cargo-bundle` (Requires cargo to be installed)
-1. Run `cargo bundle --release` to build RustCast for your system (The App Dir will be available at: `target/release/bundle/osx/RustCast.app`)
-1. Move the `RustCast.app` directory to your `/Applications/` folder, and launch RustCast
+1. Install `cargo bundle` with `cargo install cargo-bundle` (Requires cargo to
+   be installed)
+1. Run `cargo bundle --release` to build RustCast for your system (The App Dir
+   will be available at: `target/release/bundle/osx/RustCast.app`)
+1. Move the `RustCast.app` directory to your `/Applications/` folder, and launch
+   RustCast
 
 ## Config:
 
@@ -57,6 +61,7 @@ bit wonky, and will be fixed in the upcoming releases
 - [ ] Plugin Support 31/12/2025 (Partially implemented on 15/12/2025)
 - [ ] Blur / transparent background (Partially implemented on 13/12/2025)
 - [ ] Hyperkey - Map CMD + OPT + CTRL + SHIFT to a physical key
+- [ ] Ability to pick between tabs in firefox / chromium browsers - using [Puppeteer](https://pptr.dev/)
 - [ ] Cross platform support - (1/2/2026)
 
 ### Finished:
@@ -70,6 +75,8 @@ bit wonky, and will be fixed in the upcoming releases
 - [x] Customisable themes (13/12/2025)
   - [x] Configurable colours
 - [x] Spotify control - Ability to control spotify via the app
+- [x] Google your query. Simply type your query, and then put a `?` at the end,
+      and press enter
 
 ### Not Planned:
 

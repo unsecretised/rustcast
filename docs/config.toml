@@ -14,6 +14,10 @@ placeholder = "Oopsie Dasies"
 clear_on_hide = false
 clear_on_enter = true
 
+# The search engine to use, with the default being google:
+search_url = "https://google.com/search?q=%s"
+# The URL should have a %s to mark where the search arguments will go
+
 [theme]
 
 text_color = [0.95, 0.95, 0.96]
