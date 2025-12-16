@@ -131,15 +131,14 @@ impl Shelly {
         let self_clone = self.clone();
         let icon = self_clone
             .icon_path
-            .map(|x| {
+            .and_then(|x| {
                 let x = x.replace("~", &std::env::var("HOME").unwrap());
                 if x.ends_with(".icns") {
                     handle_from_icns(Path::new(&x))
                 } else {
                     Some(Handle::from_path(Path::new(&x)))
                 }
-            })
-            .flatten();
+            });
         App {
             open_command: Function::RunShellCommand(self_clone.command),
             icons: icon,
