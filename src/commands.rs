@@ -41,9 +41,10 @@ impl Function {
             Function::GoogleSearch(query_string) => {
                 let query_args = query_string.replace(" ", "+");
                 let query = config.search_url.replace("%s", &query_args);
+                let query = query.strip_suffix("?").unwrap_or(&query);
                 NSWorkspace::new().openURL(
                     &NSURL::URLWithString_relativeToURL(
-                        &objc2_foundation::NSString::from_str(&query),
+                        &objc2_foundation::NSString::from_str(query),
                         None,
                     )
                     .unwrap(),
