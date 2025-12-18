@@ -315,7 +315,7 @@ impl Tile {
             }
 
             Message::RunFunction(command) => {
-                command.execute(&self.config);
+                command.execute(&self.config, &self.query);
 
                 if self.config.buffer_rules.clear_on_enter {
                     window::latest()
@@ -430,13 +430,21 @@ impl Tile {
 
         let mut exact: Vec<App> = filter_vec
             .par_iter()
-            .filter(|x| x.name_lc == query)
+            .filter(|x| match &x.open_command {
+                Function::RunShellCommand(_) => x
+                    .name_lc
+                    .starts_with(query.split_once(" ").unwrap_or((&query, "")).0),
+                _ => x.name_lc == query,
+            })
             .cloned()
             .collect();
 
         let mut prefix: Vec<App> = filter_vec
             .par_iter()
-            .filter(|x| x.name_lc != query && x.name_lc.starts_with(&query))
+            .filter(|x| match x.open_command {
+                Function::RunShellCommand(_) => false,
+                _ => x.name_lc != query && x.name_lc.starts_with(&query),
+            })
             .cloned()
             .collect();
 

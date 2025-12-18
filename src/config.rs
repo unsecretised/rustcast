@@ -122,7 +122,7 @@ impl Default for Buffer {
 /// Alias is the text that is used to call this command / search for it
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Shelly {
-    command: Vec<String>,
+    command: String,
     icon_path: Option<String>,
     alias: String,
     alias_lc: String,

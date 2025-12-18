@@ -9,7 +9,7 @@ use crate::config::Config;
 #[derive(Debug, Clone)]
 pub enum Function {
     OpenApp(String),
-    RunShellCommand(Vec<String>),
+    RunShellCommand(String),
     RandomVar(i32),
     GoogleSearch(String),
     OpenPrefPane,
@@ -17,7 +17,7 @@ pub enum Function {
 }
 
 impl Function {
-    pub fn execute(&self, config: &Config) {
+    pub fn execute(&self, config: &Config, query: &str) {
         match self {
             Function::OpenApp(path) => {
                 NSWorkspace::new().openURL(&NSURL::fileURLWithPath(
@@ -25,9 +25,15 @@ impl Function {
                 ));
             }
             Function::RunShellCommand(shell_command) => {
+                let mut final_command = shell_command.to_owned();
+
+                for (argument_num, argument) in query.split_whitespace().enumerate() {
+                    final_command =
+                        final_command.replace(&format!("$var{}", argument_num), argument);
+                }
                 Command::new("sh")
                     .arg("-c")
-                    .arg(shell_command.join(" "))
+                    .arg(final_command)
                     .status()
                     .ok();
             }
