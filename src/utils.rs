@@ -299,8 +299,6 @@ pub fn to_key_code(key_str: &str) -> Option<Code> {
 }
 
 pub fn get_config_installation_dir() -> String {
-    
-
     if cfg!(target_os = "windows") {
         std::env::var("LOCALAPPDATA").unwrap()
     } else {
@@ -310,7 +308,6 @@ pub fn get_config_installation_dir() -> String {
 
 pub fn get_config_file_path() -> String {
     let home = get_config_installation_dir();
-    
 
     if cfg!(target_os = "windows") {
         home + "\\rustcast\\config.toml"
@@ -335,9 +332,10 @@ pub fn create_config_file_if_not_exists(
 ) -> Result<(), std::io::Error> {
     // check if file exists
     if let Ok(exists) = std::fs::metadata(file_path)
-        && exists.is_file() {
-            return Ok(());
-        }
+        && exists.is_file()
+    {
+        return Ok(());
+    }
 
     let path = Path::new(&file_path);
     if let Some(parent) = path.parent() {
