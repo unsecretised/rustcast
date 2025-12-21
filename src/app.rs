@@ -431,7 +431,7 @@ impl Tile {
         let mut exact: Vec<App> = filter_vec
             .par_iter()
             .filter(|x| match &x.open_command {
-                Function::RunShellCommand(_) => x
+                Function::RunShellCommand => x
                     .name_lc
                     .starts_with(query.split_once(" ").unwrap_or((&query, "")).0),
                 _ => x.name_lc == query,
@@ -442,7 +442,7 @@ impl Tile {
         let mut prefix: Vec<App> = filter_vec
             .par_iter()
             .filter(|x| match x.open_command {
-                Function::RunShellCommand(_) => false,
+                Function::RunShellCommand => false,
                 _ => x.name_lc != query && x.name_lc.starts_with(&query),
             })
             .cloned()

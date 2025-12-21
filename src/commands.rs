@@ -9,7 +9,7 @@ use crate::config::Config;
 #[derive(Debug, Clone)]
 pub enum Function {
     OpenApp(String),
-    RunShellCommand(String),
+    RunShellCommand,
     RandomVar(i32),
     GoogleSearch(String),
     OpenPrefPane,
@@ -24,18 +24,8 @@ impl Function {
                     &objc2_foundation::NSString::from_str(path),
                 ));
             }
-            Function::RunShellCommand(shell_command) => {
-                let mut final_command = shell_command.to_owned();
-
-                for (argument_num, argument) in query.split_whitespace().enumerate() {
-                    final_command =
-                        final_command.replace(&format!("$var{}", argument_num), argument);
-                }
-                Command::new("sh")
-                    .arg("-c")
-                    .arg(final_command)
-                    .status()
-                    .ok();
+            Function::RunShellCommand => {
+                Command::new("sh").arg("-c").arg(query).status().ok();
             }
             Function::RandomVar(var) => {
                 Clipboard::new()
