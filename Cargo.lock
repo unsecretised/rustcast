@@ -3411,6 +3411,9 @@ dependencies = [
  "serde",
  "tokio",
  "toml",
+ "walkdir",
+ "windows 0.58.0",
+ "winreg",
 ]
 
 [[package]]

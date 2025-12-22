@@ -15,6 +15,7 @@ pub struct Config {
     pub placeholder: String,
     pub search_url: String,
     pub shells: Vec<Shelly>,
+    pub index_dirs: Vec<String>,
 }
 
 impl Default for Config {
@@ -27,6 +28,7 @@ impl Default for Config {
             placeholder: String::from("Time to be productive!"),
             search_url: "https://google.com/search?q=%s".to_string(),
             shells: vec![],
+            index_dirs: vec![],
         }
     }
 }

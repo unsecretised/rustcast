@@ -1,8 +1,6 @@
 use crate::commands::Function;
 use crate::config::Config;
-use crate::macos::{focus_this_app, transform_process_to_ui_element};
-use crate::{macos, utils::get_installed_apps};
-
+use crate::utils::{get_config_file_path, get_installed_apps, read_config_file};
 use global_hotkey::{GlobalHotKeyEvent, HotKeyState};
 use iced::futures::SinkExt;
 use iced::{
@@ -18,8 +16,23 @@ use iced::{
     window::{self, Id, Settings},
 };
 
-use objc2::rc::Retained;
-use objc2_app_kit::NSRunningApplication;
+#[cfg(target_os = "macos")]
+use {
+    crate::macos::{focus_this_app, macos_window_config, transform_process_to_ui_element},
+    objc2::rc::Retained,
+    objc2_app_kit::NSApplicationActivationOptions,
+    objc2_app_kit::NSRunningApplication,
+    objc2_app_kit::NSWorkspace,
+};
+
+#[cfg(target_os = "windows")]
+use {
+    crate::windows::open_on_focused_monitor,
+    iced::window::Position::Specific,
+    windows::Win32::Foundation::HWND,
+    windows::Win32::UI::WindowsAndMessaging::{GetForegroundWindow, SetForegroundWindow},
+};
+
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use rayon::slice::ParallelSliceMut;
 
@@ -145,7 +158,10 @@ pub struct Tile {
     options: Vec<App>,
     visible: bool,
     focused: bool,
+    #[cfg(target_os = "macos")]
     frontmost: Option<Retained<NSRunningApplication>>,
+    #[cfg(target_os = "windows")]
+    frontmost: Option<HWND>,
     config: Config,
     open_hotkey_id: u32,
 }
@@ -153,32 +169,34 @@ pub struct Tile {
 impl Tile {
     /// A base window
     pub fn new(keybind_id: u32, config: &Config) -> (Self, Task<Message>) {
-        let (id, open) = window::open(default_settings());
+        let settings = default_settings();
+        #[cfg(target_os = "windows")]
+        {
+            // get normal settings and modify position
+            let pos = open_on_focused_monitor();
+            settings.position = Specific(pos);
+        }
+
+        let (id, open) = window::open(settings);
 
         let open = open.discard().chain(window::run(id, |handle| {
-            macos::macos_window_config(
-                &handle.window_handle().expect("Unable to get window handle"),
-            );
-            // should work now that we have a window
-            transform_process_to_ui_element();
+            {
+                #[cfg(target_os = "macos")]
+                {
+                    macos_window_config(
+                        &handle.window_handle().expect("Unable to get window handle"),
+                    );
+                    // should work now that we have a window
+                    transform_process_to_ui_element();
+                }
+            }
         }));
 
-        let store_icons = config.theme.show_icons;
+        // get config
+        let path = get_config_file_path();
+        let config = read_config_file(&path).unwrap();
 
-        let user_local_path = std::env::var("HOME").unwrap() + "/Applications/";
-
-        let paths = vec![
-            "/Applications/",
-            user_local_path.as_str(),
-            "/System/Applications/",
-            "/System/Applications/Utilities/",
-        ];
-
-        let mut options: Vec<App> = paths
-            .par_iter()
-            .map(|path| get_installed_apps(path, store_icons))
-            .flatten()
-            .collect();
+        let mut options: Vec<App> = get_installed_apps(&config);
 
         options.extend(config.shells.iter().map(|x| x.to_app()));
         options.extend(App::basic_apps());
@@ -206,7 +224,11 @@ impl Tile {
         match message {
             Message::OpenWindow => {
                 self.capture_frontmost();
-                focus_this_app();
+                #[cfg(target_os = "macos")]
+                {
+                    focus_this_app();
+                }
+
                 self.focused = true;
                 Task::none()
             }
@@ -272,16 +294,13 @@ impl Tile {
             Message::ClearSearchQuery => {
                 self.query_lc = String::new();
                 self.query = String::new();
+                self.prev_query_lc = String::new();
                 Task::none()
             }
 
             Message::ReloadConfig => {
                 self.config = toml::from_str(
-                    &fs::read_to_string(
-                        std::env::var("HOME").unwrap_or("".to_owned())
-                            + "/.config/rustcast/config.toml",
-                    )
-                    .unwrap_or("".to_owned()),
+                    &fs::read_to_string(get_config_file_path()).unwrap_or("".to_owned()),
                 )
                 .unwrap();
 
@@ -292,12 +311,27 @@ impl Tile {
                 if hk_id == self.open_hotkey_id {
                     self.visible = !self.visible;
                     if self.visible {
-                        Task::chain(
-                            window::open(default_settings())
-                                .1
-                                .map(|_| Message::OpenWindow),
-                            operation::focus("query"),
-                        )
+                        #[cfg(target_os = "windows")]
+                        {
+                            // get normal settings and modify position
+                            let pos = open_on_focused_monitor();
+                            let mut settings = default_settings();
+                            settings.position = Specific(pos);
+                            Task::chain(
+                                window::open(settings).1.map(|_| Message::OpenWindow),
+                                operation::focus("query"),
+                            )
+                        }
+
+                        #[cfg(target_os = "macos")]
+                        {
+                            Task::chain(
+                                window::open(default_settings())
+                                    .1
+                                    .map(|_| Message::OpenWindow),
+                                operation::focus("query"),
+                            )
+                        }
                     } else {
                         let to_close = window::latest().map(|x| x.unwrap());
                         Task::batch([
@@ -453,18 +487,34 @@ impl Tile {
     }
 
     pub fn capture_frontmost(&mut self) {
-        use objc2_app_kit::NSWorkspace;
+        #[cfg(target_os = "macos")]
+        {
+            let ws = NSWorkspace::sharedWorkspace();
+            self.frontmost = ws.frontmostApplication();
+        };
 
-        let ws = NSWorkspace::sharedWorkspace();
-        self.frontmost = ws.frontmostApplication();
+        #[cfg(target_os = "windows")]
+        {
+            self.frontmost = Some(unsafe { GetForegroundWindow() });
+        }
     }
 
     #[allow(deprecated)]
     pub fn restore_frontmost(&mut self) {
-        use objc2_app_kit::NSApplicationActivationOptions;
+        #[cfg(target_os = "macos")]
+        {
+            if let Some(app) = self.frontmost.take() {
+                app.activateWithOptions(NSApplicationActivationOptions::ActivateIgnoringOtherApps);
+            }
+        }
 
-        if let Some(app) = self.frontmost.take() {
-            app.activateWithOptions(NSApplicationActivationOptions::ActivateIgnoringOtherApps);
+        #[cfg(target_os = "windows")]
+        {
+            if let Some(handle) = self.frontmost {
+                unsafe {
+                    let _ = SetForegroundWindow(handle);
+                }
+            }
         }
     }
 }

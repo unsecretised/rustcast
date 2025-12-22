@@ -3,8 +3,12 @@ mod commands;
 mod config;
 mod macos;
 mod utils;
+mod windows;
 
-use crate::{app::Tile, config::Config, utils::to_key_code};
+// import from utils
+use crate::utils::{create_config_file_if_not_exists, get_config_file_path, read_config_file};
+
+use crate::{app::Tile, utils::to_key_code};
 
 use global_hotkey::{
     GlobalHotKeyManager,
@@ -17,19 +21,10 @@ fn main() -> iced::Result {
         macos::set_activation_policy_accessory();
     }
 
-    let home = std::env::var("HOME").unwrap();
+    let file_path = get_config_file_path();
+    let config = read_config_file(&file_path).unwrap();
+    create_config_file_if_not_exists(&file_path, &config).unwrap();
 
-    let file_path = home.clone() + "/.config/rustcast/config.toml";
-    let config: Config = match std::fs::read_to_string(&file_path) {
-        Ok(a) => toml::from_str(&a).unwrap(),
-        Err(_) => Config::default(),
-    };
-    std::fs::create_dir_all(home + "/.config/rustcast").unwrap();
-    std::fs::write(
-        &file_path,
-        toml::to_string(&config).unwrap_or_else(|x| x.to_string()),
-    )
-    .unwrap();
     let manager = GlobalHotKeyManager::new().unwrap();
 
     let show_hide = HotKey::new(
