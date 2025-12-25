@@ -140,7 +140,10 @@ impl Shelly {
             }
         });
         App {
-            open_command: Function::RunShellCommand,
+            open_command: Function::RunShellCommand(
+                self_clone.command,
+                self_clone.alias_lc.clone(),
+            ),
             icons: icon,
             name: self_clone.alias,
             name_lc: self_clone.alias_lc,

@@ -9,7 +9,7 @@ use crate::config::Config;
 #[derive(Debug, Clone)]
 pub enum Function {
     OpenApp(String),
-    RunShellCommand,
+    RunShellCommand(String, String),
     RandomVar(i32),
     GoogleSearch(String),
     OpenPrefPane,
@@ -27,8 +27,15 @@ impl Function {
                     ));
                 });
             }
-            Function::RunShellCommand => {
-                Command::new("sh").arg("-c").arg(query).status().ok();
+            Function::RunShellCommand(command, alias) => {
+                let query = query.to_string();
+                let final_command =
+                    format!(r#"{} {}"#, command, query.strip_prefix(alias).unwrap_or(""));
+                Command::new("sh")
+                    .arg("-c")
+                    .arg(final_command.trim())
+                    .spawn()
+                    .ok();
             }
             Function::RandomVar(var) => {
                 Clipboard::new()
