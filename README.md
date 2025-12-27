@@ -55,7 +55,6 @@ bit wonky, and will be fixed in the upcoming releases
 ### Planned:
 
 - [ ] Select the options using arrow keys 13/12/2025
-- [ ] Calculator 15/12/2025
 - [ ] Popup note-taking 18/12/2025
 - [ ] Clipboard History 20/12/2025
 - [ ] Plugin Support 31/12/2025 (Partially implemented on 15/12/2025)
@@ -79,6 +78,7 @@ bit wonky, and will be fixed in the upcoming releases
 - [x] Allow variables to be passed into custom shell scripts.
 - [x] Google your query. Simply type your query, and then put a `?` at the end,
       and press enter
+- [x] Calculator (27/12/2025)
 
 ### Not Possible by me:
 
