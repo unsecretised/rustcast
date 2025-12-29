@@ -404,7 +404,7 @@ impl Tile {
             }
 
             Message::ClipboardHistory(clip_content) => {
-                self.clipboard_content.push(clip_content);
+                self.clipboard_content.insert(0, clip_content);
                 Task::none()
             }
 
