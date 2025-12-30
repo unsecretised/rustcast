@@ -240,7 +240,7 @@ impl Tile {
                 self.query_lc = input.trim().to_lowercase();
                 self.query = input;
                 let prev_size = self.results.len();
-                if self.query_lc.is_empty() {
+                if self.query_lc.is_empty() && self.page == Page::Main {
                     self.results = vec![];
                     return window::resize(
                         id,
