@@ -1,6 +1,8 @@
 //! This is the config file type definitions for rustcast
 use std::{path::Path, sync::Arc};
 
+use global_hotkey::hotkey::Code;
+
 use iced::{theme::Custom, widget::image::Handle};
 use serde::{Deserialize, Serialize};
 
@@ -11,7 +13,7 @@ use crate::{app::apps::App, commands::Function, utils::handle_from_icns};
 #[serde(default)]
 pub struct Config {
     pub toggle_mod: String,
-    pub toggle_key: String,
+    pub toggle_key: Code,
     pub buffer_rules: Buffer,
     pub theme: Theme,
     pub placeholder: String,
@@ -24,7 +26,7 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             toggle_mod: "ALT".to_string(),
-            toggle_key: "Space".to_string(),
+            toggle_key: Code::Space,
             buffer_rules: Buffer::default(),
             theme: Theme::default(),
             placeholder: String::from("Time to be productive!"),

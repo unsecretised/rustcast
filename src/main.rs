@@ -8,11 +8,11 @@ mod utils;
 
 use std::path::Path;
 
-use crate::{app::tile::Tile, config::Config, utils::to_key_code};
+use crate::{app::tile::Tile, config::Config};
 
 use global_hotkey::{
     GlobalHotKeyManager,
-    hotkey::{Code, HotKey, Modifiers},
+    hotkey::{HotKey, Modifiers},
 };
 
 fn main() -> iced::Result {
@@ -41,11 +41,14 @@ fn main() -> iced::Result {
 
     let show_hide = HotKey::new(
         Some(Modifiers::from_name(&config.toggle_mod).unwrap_or(Modifiers::ALT)),
-        to_key_code(&config.toggle_key).unwrap_or(Code::Space),
+        config.toggle_key,
     );
 
+    // Hotkeys are stored as a vec so that hyperkey support can be added later
+    let hotkeys = vec![show_hide];
+
     manager
-        .register_all(&[show_hide])
+        .register_all(&hotkeys)
         .expect("Unable to register hotkey");
 
     iced::daemon(
