@@ -83,7 +83,7 @@ jobs:
 
       - name: Codesign .app bundle
         run: |
-          APP_PATH="target/${{ matrix.target }}/release/bundle/osx/${APP_NAME}.app"
+          APP_PATH="target/${{ matrix.target }}/release/bundle/osx/rustcast.app"
 
           # Find Developer ID Application identity
           SIGN_IDENTITY=$(security find-identity -p codesigning -v | grep "Developer ID Application" | head -n1 | awk '{print $2}')
