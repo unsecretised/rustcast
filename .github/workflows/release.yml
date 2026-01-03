@@ -81,23 +81,6 @@ jobs:
           MACOS_CERT_P12: ${{ secrets.MACOS_CERT_P12 }}
           MACOS_CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
 
-      - name: Codesign .app bundle
-        run: |
-          APP_PATH="target/${{ matrix.target }}/release/bundle/osx/rustcast.app"
-
-          # Find Developer ID Application identity
-          SIGN_IDENTITY=$(security find-identity -p codesigning -v | grep "Developer ID Application" | head -n1 | awk '{print $2}')
-          echo "Using signing identity: $SIGN_IDENTITY"
-
-          # Basic hardened runtime signing. If you later need entitlements, add --entitlements entitlements.plist
-          codesign --force --options runtime --timestamp --deep \
-            --sign "$SIGN_IDENTITY" \
-            "$APP_PATH"
-
-          echo "Verifying codesign..."
-          codesign --verify --deep --strict --verbose=2 "$APP_PATH"
-          spctl -a -vvvv "$APP_PATH" || true
-
       - name: Create dmg
         run: |
           APP_PATH="target/${{ matrix.target }}/release/bundle/osx/${APP_NAME}.app"
