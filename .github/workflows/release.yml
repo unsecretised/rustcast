@@ -21,6 +21,13 @@ jobs:
 
     runs-on: ${{ matrix.os }}
 
+    env:
+      APP_NAME: RustCast
+      BUNDLE_ID: com.umangsurana.rustcast
+      TEAM_ID: ${{ secrets.TEAM_ID }}
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -51,39 +58,107 @@ jobs:
           path: target
           key: ${{ runner.os }}-${{ matrix.target }}-cargo-build-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Build release binary
+      - name: Build release .app with cargo-bundle
         run: cargo bundle --release --target ${{ matrix.target }}
 
-      - name: Create artifacts directory
-        run: mkdir -p artifacts
-
-      - name: Package app bundle
+      - name: Set up keychain and import signing certificate
         run: |
-          cd target/${{ matrix.target }}/release/bundle/osx
-          zip -r ../../../../../artifacts/rustcast-${{ matrix.target }}.app.zip *.app
+          KEYCHAIN=build.keychain
+          security create-keychain -p "" "$KEYCHAIN"
+          security default-keychain -s "$KEYCHAIN"
+          security unlock-keychain -p "" "$KEYCHAIN"
+          security set-keychain-settings "$KEYCHAIN"
 
-      - name: Upload artifacts
+          # Import certificate from base64 secret
+          echo "${MACOS_CERT_P12}" | base64 --decode > cert.p12
+          security import cert.p12 -k "$KEYCHAIN" -P "${MACOS_CERT_PASSWORD}" -T /usr/bin/codesign -T /usr/bin/productsign
+
+          # Allow codesign access
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "" "$KEYCHAIN"
+
+          security find-identity -v -p codesigning
+        env:
+          MACOS_CERT_P12: ${{ secrets.MACOS_CERT_P12 }}
+          MACOS_CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
+
+      - name: Codesign .app bundle
+        run: |
+          APP_PATH="target/${{ matrix.target }}/release/bundle/osx/${APP_NAME}.app"
+
+          # Find Developer ID Application identity
+          SIGN_IDENTITY=$(security find-identity -p codesigning -v | grep "Developer ID Application" | head -n1 | awk '{print $2}')
+          echo "Using signing identity: $SIGN_IDENTITY"
+
+          # Basic hardened runtime signing. If you later need entitlements, add --entitlements entitlements.plist
+          codesign --force --options runtime --timestamp --deep \
+            --sign "$SIGN_IDENTITY" \
+            "$APP_PATH"
+
+          echo "Verifying codesign..."
+          codesign --verify --deep --strict --verbose=2 "$APP_PATH"
+          spctl -a -vvvv "$APP_PATH" || true
+
+      - name: Create dmg
+        run: |
+          APP_PATH="target/${{ matrix.target }}/release/bundle/osx/${APP_NAME}.app"
+          DMG_NAME="rustcast-${{ matrix.target }}.dmg"
+
+          mkdir dmg-root
+          cp -R "$APP_PATH" dmg-root/
+          ln -s /Applications dmg-root/Applications
+
+          hdiutil create \
+            -volname "${APP_NAME}" \
+            -srcfolder dmg-root \
+            -ov \
+            -format UDZO \
+            "$DMG_NAME"
+
+      - name: Codesign dmg
+        run: |
+          DMG_NAME="rustcast-${{ matrix.target }}.dmg"
+          SIGN_IDENTITY=$(security find-identity -p codesigning -v | grep "Developer ID Application" | head -n1 | awk '{print $2}')
+
+          codesign --force --timestamp --sign "$SIGN_IDENTITY" "$DMG_NAME"
+          codesign --verify --verbose=2 "$DMG_NAME"
+
+      - name: Notarize dmg with notarytool
+        run: |
+          DMG_NAME="rustcast-${{ matrix.target }}.dmg"
+
+          xcrun notarytool submit "$DMG_NAME" \
+            --apple-id "$APPLE_ID" \
+            --team-id "$TEAM_ID" \
+            --password "$APPLE_ID_PASSWORD" \
+            --wait
+
+      - name: Staple notarization ticket
+        run: |
+          DMG_NAME="rustcast-${{ matrix.target }}.dmg"
+          xcrun stapler staple "$DMG_NAME"
+          xcrun stapler validate "$DMG_NAME"
+
+      - name: Upload dmg artifacts
         uses: actions/upload-artifact@v4
         with:
           name: macos-${{ matrix.target }}
-          path: artifacts/*.zip
+          path: rustcast-${{ matrix.target }}.dmg
           retention-days: 7
 
   create-release:
     needs: build-macos
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
-
     steps:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
 
-      - name: Create release
+      - name: Create GitHub Release with DMGs
         uses: softprops/action-gh-release@v1
         with:
-          files: artifacts/**/*.zip
+          files: artifacts/**/rustcast-*.dmg
           draft: false
           prerelease: false
         env:
