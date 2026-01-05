@@ -21,6 +21,9 @@ jobs:
 
     runs-on: ${{ matrix.os }}
 
+    env:
+      APP_VERSION: ${{ github.ref_name }}
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
