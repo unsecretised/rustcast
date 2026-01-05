@@ -30,6 +30,8 @@ pub struct App {
 impl App {
     /// This returns the basic apps that rustcast has, such as quiting rustcast and opening preferences
     pub fn basic_apps() -> Vec<App> {
+        let app_version = option_env!("APP_VERSION").unwrap_or("Unknown Version");
+
         vec![
             App {
                 open_command: Function::Quit,
@@ -56,7 +58,7 @@ impl App {
                 open_command: Function::Nothing,
                 desc: RUSTCAST_DESC_NAME.to_string(),
                 icons: None,
-                name: "RustCast Version: 0.2.7".to_string(),
+                name: format!("RustCast Version: {app_version}"),
                 name_lc: "version".to_string(),
             },
         ]
