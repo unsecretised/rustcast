@@ -16,6 +16,7 @@ use crate::{
     utils::handle_from_icns,
 };
 
+/// This tells each "App" what to do when it is clicked, whether it is a function, a message, or a display
 #[allow(dead_code)]
 #[derive(Debug, Clone, PartialEq)]
 pub enum AppCommand {
