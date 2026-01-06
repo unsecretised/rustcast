@@ -84,7 +84,7 @@ impl App {
                 open_command: AppCommand::Function(Function::OpenApp(
                     "/System/Library/CoreServices/Finder.app".to_string(),
                 )),
-                desc: RUSTCAST_DESC_NAME.to_string(),
+                desc: "Application".to_string(),
                 icons: handle_from_icns(Path::new(
                     "/System/Library/CoreServices/Finder.app/Contents/Resources/Finder.icns",
                 )),
