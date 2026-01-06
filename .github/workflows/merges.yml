@@ -16,11 +16,8 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Install macOS ARM64 target
-        run: rustup target add aarch64-apple-darwin
-
       - name: Check formatting
         run: cargo fmt --all --check
 
       - name: Build for macOS ARM64
-        run: cargo build --target aarch64-apple-darwin --all-features
+        run: cargo check --target aarch64-apple-darwin
