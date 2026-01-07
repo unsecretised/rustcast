@@ -57,7 +57,6 @@ bit wonky, and will be fixed in the upcoming releases
 - [ ] Select the options using arrow keys
 - [ ] Popup note-taking
 - [ ] Plugin Support (Partially implemented on 15/12/2025)
-- [ ] Blur / transparent background (Partially implemented on 13/12/2025)
 - [ ] Hyperkey - Map CMD + OPT + CTRL + SHIFT to a physical key
 - [ ] Ability to pick between tabs in firefox / chromium browsers - using
       [Puppeteer](https://pptr.dev/)
@@ -80,6 +79,7 @@ bit wonky, and will be fixed in the upcoming releases
 - [x] Calculator (27/12/2025)
 - [x] Clipboard History (29/12/2025) This works by typing `cbhist` to enter the
       cliboard history page, which allows u to access your clipboard history,
+- [x] Blur / transparent background (7/1/2026)
       and then use `main` to switch back, or just open an close the app again
 
 ### Not Possible by me:
