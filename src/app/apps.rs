@@ -126,7 +126,7 @@ impl App {
                 }
             })
             .style(|_, _| iced::widget::button::Style {
-                background: Some(Background::Color(theme.bg_color())),
+                background: None,
                 text_color: theme.text_color(1.),
                 ..Default::default()
             })
