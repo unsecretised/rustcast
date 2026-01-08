@@ -15,8 +15,18 @@ clear_on_hide = false
 clear_on_enter = true
 
 # The search engine to use, with the default being google:
-search_url = "https://google.com/search?q=%s"
 # The URL should have a %s to mark where the search arguments will go
+search_url = "https://google.com/search?q=%s"
+
+# As long as the font is installed, you can use it using the exact name (Check in the fontbook app)
+font = "Fira Code"
+
+# Get haptic feedback when typing in the search bar
+haptic_feedback = true
+
+# Show the tray icon
+show_trayicon = true
+
 
 [theme]
 
