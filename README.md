@@ -8,7 +8,7 @@
 
 ## Installation:
 
-### Via Homebrew (Recommended):
+### Via Homebrew:
 
 > Requires Homebrew
 
@@ -24,9 +24,10 @@ use spotlight :) Have fun!)
 
 1. Go to the
    [releases page](https://github.com/unsecretised/rustcast/releases/latest)
-2. Download the `.zip` file
-3. Open it, and if there is a "this app is damaged", run the command
-   `xattr -cr <RustCast.app directory here>`
+2. Download the `.zip` file or `.dmg` file
+3. If `.dmg` file, open it and drag the `RustCast.app` to your `/Applications/`
+   (you should be guided)
+4. If `.zip` file, extract the `RustCast.app` to your `/Applications/`
 
 ### Build it youself:
 
