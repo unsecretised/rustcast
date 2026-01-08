@@ -52,8 +52,10 @@ pub fn new(keybind_id: u32, config: &Config) -> (Tile, Task<Message>) {
 
     let paths = default_app_paths();
 
-    let mtm = MainThreadMarker::new().unwrap();
-    new_menu_icon(mtm);
+    if config.show_trayicon {
+        let mtm = MainThreadMarker::new().unwrap();
+        new_menu_icon(mtm);
+    }
 
     let mut options: Vec<App> = paths
         .par_iter()
