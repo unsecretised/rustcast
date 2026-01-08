@@ -1,9 +1,14 @@
+//! This is the haptics module for rustcast
+//! It is used to perform haptic feedback on the macOS platform
+//! For debugging this module, just pray and hope that it works, because even I don't fully understand
+//! how it works
 #![allow(non_camel_case_types)]
 
 use objc2_core_foundation::{CFNumber, CFNumberType, CFRetained, CFString, CFType};
 use once_cell::sync::OnceCell;
 use std::ffi::{c_char, c_void};
 
+/// The kinds of haptic patterns that can be performed
 #[allow(dead_code)]
 #[derive(Copy, Clone, Debug)]
 pub enum HapticPattern {
@@ -16,6 +21,7 @@ unsafe extern "C" {
     unsafe fn CFRelease(cf: *mut CFType);
 }
 
+/// Convert a pattern to an index
 #[inline]
 fn pattern_index(pattern: HapticPattern) -> i32 {
     match pattern {
@@ -143,6 +149,8 @@ fn mts_state() -> Option<&'static MtsState> {
     MTS.get_or_init(MtsState::open_default_or_all).as_ref()
 }
 
+/// Perform a haptic feedback - Just use this function to perform haptic feedback... please don't
+/// remake this function unless you're a genius or absolutely have to
 pub fn perform_haptic(pattern: HapticPattern) -> bool {
     if let Some(state) = mts_state() {
         let pat = pattern_index(pattern);

@@ -1,7 +1,9 @@
+//! This has the menubar icon logic for the app
 use objc2::{MainThreadMarker, sel};
 use objc2_app_kit::{NSImage, NSMenu, NSMenuItem, NSStatusBar, NSVariableStatusItemLength};
 use objc2_foundation::{NSSize, NSString};
 
+/// This create a new menubar icon for the app
 pub fn new_menu_icon(mtm: MainThreadMarker) {
     let status_bar = NSStatusBar::systemStatusBar();
     let status_item = status_bar.statusItemWithLength(NSVariableStatusItemLength);
