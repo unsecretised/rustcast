@@ -81,11 +81,7 @@ bit wonky, and will be fixed in the upcoming releases
       cliboard history page, which allows u to access your clipboard history,
 - [x] Blur / transparent background (7/1/2026)
       and then use `main` to switch back, or just open an close the app again
-
-### Not Possible by me:
-
-- [ ] Tray Icon for quitting the app. One may ask why? Well, because I CAN'T GET
-      IT TO WORK.. I've SPENT TOO LONG ON THIS
+- [x] Tray icons (8/1/2026)
 
 ## If you like rustcast, consider starring it on github :)
 
