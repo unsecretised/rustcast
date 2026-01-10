@@ -188,6 +188,16 @@ pub fn open_settings() {
     });
 }
 
+pub fn open_url(url: &str) {
+    let url = url.to_owned();
+    thread::spawn(move || {
+        NSWorkspace::new().openURL(
+            &NSURL::URLWithString_relativeToURL(&objc2_foundation::NSString::from_str(&url), None)
+                .unwrap(),
+        );
+    });
+}
+
 pub fn is_valid_url(s: &str) -> bool {
     s.ends_with(".com")
         || s.ends_with(".net")

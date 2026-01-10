@@ -12,7 +12,7 @@ use tray_icon::{
 
 use crate::{
     app::{Message, tile::ExtSender},
-    utils::open_settings,
+    utils::{open_settings, open_url},
 };
 
 use tokio::runtime::Runtime;
@@ -29,9 +29,13 @@ pub fn menu_icon(hotkey: (Option<Modifiers>, Code), hotkey_id: u32, sender: ExtS
     let menu = Menu::with_items(&[
         &version_item(),
         &about_item(image),
+        &open_github_item(),
         &PredefinedMenuItem::separator(),
         &refresh_item(),
         &open_item(hotkey),
+        &PredefinedMenuItem::separator(),
+        &open_issue_item(),
+        &get_help_item(),
         &PredefinedMenuItem::separator(),
         &open_settings_item(),
         &quit_item(),
@@ -67,6 +71,9 @@ fn init_event_handler(sender: ExtSender, hotkey_id: u32) {
                     sender.clone().try_send(Message::ReloadConfig).unwrap();
                 });
             }
+            "open_issue_page" => {
+                open_url("https://github.com/unsecretised/rustcast/issues/new");
+            }
             "show_rustcast" => {
                 runtime.spawn(async move {
                     sender
@@ -75,8 +82,14 @@ fn init_event_handler(sender: ExtSender, hotkey_id: u32) {
                         .unwrap();
                 });
             }
+            "open_help_page" => {
+                open_url("https://github.com/unsecretised/rustcast/discussions");
+            }
             "open_preferences" => {
                 open_settings();
+            }
+            "open_github_page" => {
+                open_url("https://github.com/unsecretised/rustcast");
             }
             _ => {}
         }
@@ -91,16 +104,24 @@ fn version_item() -> MenuItem {
 fn open_item(hotkey: (Option<Modifiers>, Code)) -> MenuItem {
     MenuItem::with_id(
         "show_rustcast",
-        "Toggle RustCast",
+        "Toggle View",
         true,
         Some(Accelerator::new(hotkey.0, hotkey.1)),
     )
 }
 
+fn open_github_item() -> MenuItem {
+    MenuItem::with_id("open_github_page", "Star on Github", true, None)
+}
+
+fn open_issue_item() -> MenuItem {
+    MenuItem::with_id("open_issue_page", "Report an Issue", true, None)
+}
+
 fn refresh_item() -> MenuItem {
     MenuItem::with_id(
         "refresh_rustcast",
-        "Refresh RustCast",
+        "Refresh",
         true,
         Some(Accelerator::new(
             Some(Modifiers::SUPER),
@@ -118,8 +139,12 @@ fn open_settings_item() -> MenuItem {
     )
 }
 
+fn get_help_item() -> MenuItem {
+    MenuItem::with_id("open_help_page", "Help", true, None)
+}
+
 fn quit_item() -> PredefinedMenuItem {
-    PredefinedMenuItem::quit(Some("Quit RustCast"))
+    PredefinedMenuItem::quit(Some("Quit"))
 }
 
 fn about_item(image: DynamicImage) -> PredefinedMenuItem {
@@ -135,5 +160,5 @@ fn about_item(image: DynamicImage) -> PredefinedMenuItem {
         .license(Some("MIT"))
         .build();
 
-    PredefinedMenuItem::about(Some("About RustCast"), Some(about_metadata_builder))
+    PredefinedMenuItem::about(Some("About.."), Some(about_metadata_builder))
 }
