@@ -18,7 +18,6 @@ security default-keychain -s "$KEYCHAIN"
 security unlock-keychain -p "$MACOS_CI_KEYCHAIN_PWD" "$KEYCHAIN"
 security set-keychain-settings "$KEYCHAIN"
 
-# Import certificate (Base64 encoded .p12 in secret MACOS_CERTIFICATE)
 echo "$MACOS_CERTIFICATE" | base64 --decode > certificate.p12
 security import certificate.p12 \
   -k "$KEYCHAIN" \
