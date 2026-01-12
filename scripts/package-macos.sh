@@ -33,7 +33,11 @@ if [[ -n "$MACOS_NOTARY_KEY_ID" ]]; then
     --key-id "$MACOS_NOTARY_KEY_ID" \
     --issuer "$MACOS_NOTARY_ISSUER_ID" \
     --team-id "$MACOS_NOTARY_TEAM_ID" \
-    --wait
+    --wait \
+    --output-format json \
+    --log-file notarization-log.json
+
+  cat notarization-log.json
 
   xcrun stapler staple "$DMG_PATH"
   echo "Notarized and stapled DMG."
