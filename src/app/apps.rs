@@ -151,7 +151,7 @@ impl App {
                         .font(theme.font())
                         .color(theme.text_color(0.4)),
                 )
-                .padding(12)
+                .padding(12),
             )
             .width(Fill);
 
