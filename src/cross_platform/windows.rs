@@ -1,4 +1,3 @@
-#[cfg(target_os = "windows")]
 use {
     crate::app::apps::App, windows::{Win32::{System::Com::CoTaskMemFree, UI::{Shell::{
         FOLDERID_LocalAppData, FOLDERID_ProgramFiles, FOLDERID_ProgramFilesX86, KF_FLAG_DEFAULT,
@@ -6,7 +5,6 @@ use {
     }, WindowsAndMessaging::GetCursorPos}}, core::GUID}
 };
 
-#[cfg(target_os = "windows")]
 fn get_apps_from_registry(apps: &mut Vec<App>) {
     use std::ffi::OsString;
     let hkey = winreg::RegKey::predef(winreg::enums::HKEY_LOCAL_MACHINE);
@@ -60,7 +58,6 @@ fn get_apps_from_registry(apps: &mut Vec<App>) {
         });
     });
 }
-#[cfg(target_os = "windows")]
 fn get_apps_from_known_folder(apps: &mut Vec<App>) {
     let paths = get_known_paths();
 
@@ -96,7 +93,6 @@ fn get_apps_from_known_folder(apps: &mut Vec<App>) {
         }
     }
 }
-#[cfg(target_os = "windows")]
 fn get_known_paths() -> Vec<String> {
     let paths = vec![
         get_windows_path(&FOLDERID_ProgramFiles).unwrap_or_default(),
@@ -105,7 +101,6 @@ fn get_known_paths() -> Vec<String> {
     ];
     paths
 }
-#[cfg(target_os = "windows")]
 fn get_windows_path(folder_id: &GUID) -> Option<String> {
     unsafe {
         let folder = SHGetKnownFolderPath(folder_id, KF_FLAG_DEFAULT, None);
@@ -118,7 +113,6 @@ fn get_windows_path(folder_id: &GUID) -> Option<String> {
         }
     }
 }
-#[cfg(target_os = "windows")]
 pub fn get_installed_windows_apps() -> Vec<App> {
     use crate::utils::index_dirs_from_config;
 
@@ -129,7 +123,6 @@ pub fn get_installed_windows_apps() -> Vec<App> {
     apps
 }
 
-#[cfg(target_os = "windows")]
 pub fn open_on_focused_monitor() -> iced::Point {
     use windows::Win32::Foundation::POINT;
     use windows::Win32::Graphics::Gdi::{
