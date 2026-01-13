@@ -115,7 +115,7 @@ impl App {
             && let Some(icon) = &self.icons
         {
             tile = tile
-                .push(container(Viewer::new(icon).height(35).width(35)).padding(5))
+                .push(container(Viewer::new(icon).height(35).width(35)))
                 .align_y(Alignment::Center);
         }
 
@@ -151,7 +151,7 @@ impl App {
                         .font(theme.font())
                         .color(theme.text_color(0.4)),
                 )
-                .padding(15),
+                .padding(12),
             )
             .width(Fill);
 
