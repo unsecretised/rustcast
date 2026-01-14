@@ -1,13 +1,8 @@
 # Things you can configure
 
-# Full list of modifiers: https://docs.rs/global-hotkey/0.7.0/global_hotkey/hotkey/struct.Modifiers.html#impl-Modifiers
-# Do note, CMD is Super on MacOS
-# If you are not sure, use google or GenAI to find out.
-toggle_mod = "SHIFT"
+# Your hotkey that will be used to toggle rustcast
+toggle_hotkey = "ALT+SHIFT+1"
 
-# Full list of keys: https://docs.rs/global-hotkey/0.7.0/global_hotkey/hotkey/enum.Code.html#variants
-# Same things as Modifiers, google if unsure. If something should work, but isn't working, open an issue and I'll help
-toggle_key = "1"
 placeholder = "Oopsie Dasies"
 
 # Buffer (all fields are optional bools)

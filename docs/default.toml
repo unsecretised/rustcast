@@ -1,7 +1,6 @@
 # Default Config
 
-toggle_mod = "ALT"
-toggle_key = "Space"
+toggle_hotkey = "ALT+SPACE"
 placeholder = "Time to be productive!"
 search_url = "https://google.com/search?q=%s"
 haptic_feedback = false
