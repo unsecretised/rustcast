@@ -90,17 +90,7 @@ pub fn view(tile: &Tile, wid: window::Id) -> Element<'_, Message> {
             .on_input(move |a| Message::SearchQueryChanged(a, wid))
             .on_paste(move |a| Message::SearchQueryChanged(a, wid))
             .font(tile.config.theme.font())
-            .on_submit_maybe({
-                if !tile.results.is_empty() {
-                    match tile.results.first().unwrap().to_owned().open_command {
-                        AppCommand::Function(func) => Some(Message::RunFunction(func)),
-                        AppCommand::Message(msg) => Some(msg),
-                        AppCommand::Display => None,
-                    }
-                } else {
-                    None
-                }
-            })
+            .on_submit(Message::OpenFocused)
             .id("query")
             .width(Fill)
             .line_height(LineHeight::Relative(1.5))
