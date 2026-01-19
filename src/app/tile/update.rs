@@ -12,7 +12,6 @@ use iced::widget::operation;
 use iced::widget::operation::AbsoluteOffset;
 use iced::window;
 use rayon::slice::ParallelSliceMut;
-use url::Url;
 
 use crate::app::ArrowKey;
 use crate::app::DEFAULT_WINDOW_HEIGHT;
@@ -24,6 +23,7 @@ use crate::app::apps::AppCommand;
 use crate::app::default_settings;
 use crate::app::menubar::menu_icon;
 use crate::app::tile::AppIndex;
+#[cfg(target_os = "windows")]
 use crate::app::tile::elm::default_app_paths;
 use crate::app::{Message, Page, tile::Tile};
 
@@ -34,11 +34,10 @@ use crate::calculator::Expr;
 use crate::clipboard::ClipBoardContentType;
 use crate::commands::Function;
 use crate::config::Config;
-use crate::haptics::HapticPattern;
-use crate::haptics::perform_haptic;
 use crate::unit_conversion;
 use crate::utils::get_installed_apps;
 
+use crate::utils::is_valid_url;
 #[cfg(target_os = "macos")]
 use crate::{
     cross_platform::macos::focus_this_app,

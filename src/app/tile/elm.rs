@@ -13,7 +13,6 @@ use iced::{Length::Fill, widget::text_input};
 use rayon::slice::ParallelSliceMut;
 
 use crate::app::tile::AppIndex;
-use crate::config::Theme;
 use crate::utils::get_installed_apps;
 use crate::styles::{contents_style, rustcast_text_input_style};
 use crate::{
