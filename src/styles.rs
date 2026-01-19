@@ -35,7 +35,7 @@ pub fn rustcast_text_input_style(theme: &ConfigTheme, status: Status) -> text_in
         border: Border {
             color: border_color,
             width: border_width,
-            radius: Radius::new(5.0),
+            radius: Radius::new(5.0).bottom(0.),
         },
         icon: theme.text_color(0.7),
         placeholder: theme.text_color(0.45),
