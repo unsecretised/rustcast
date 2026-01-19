@@ -11,7 +11,10 @@ mod utils;
 
 use std::path::Path;
 
-use crate::{app::tile::Tile, config::Config};
+use crate::{
+    app::tile::{self, Tile},
+    config::Config,
+};
 
 use global_hotkey::GlobalHotKeyManager;
 
@@ -49,9 +52,9 @@ fn main() -> iced::Result {
         .expect("Unable to register hotkey");
 
     iced::daemon(
-        move || Tile::new(show_hide, &config),
-        Tile::update,
-        Tile::view,
+        move || tile::elm::new(show_hide, &config),
+        tile::update::handle_update,
+        tile::elm::view,
     )
     .subscription(Tile::subscription)
     .theme(Tile::theme)
