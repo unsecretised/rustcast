@@ -308,14 +308,16 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
         },
 
         Message::ReloadConfig => {
-            let new_config: Config = toml::from_str(
+            let new_config: Config = match toml::from_str(
                 &fs::read_to_string(
                     std::env::var("HOME").unwrap_or("".to_owned())
                         + "/.config/rustcast/config.toml",
                 )
                 .unwrap_or("".to_owned()),
-            )
-            .unwrap();
+            ) {
+                Ok(a) => a,
+                Err(_) => return Task::none(),
+            };
 
             let mut new_options: Vec<App> = default_app_paths()
                 .par_iter()
