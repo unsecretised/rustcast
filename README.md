@@ -76,6 +76,7 @@ will be fixed in the upcoming releases
 - [x] Select the options using arrow keys
 - [x] Tray icons (8/1/2026)
 - [x] Unit Conversions (19/1/2026) thanks to [Hriztam](https://github.com/hriztam)
+- [x] Emoji Searching (19/1/2026) Allows people to search for emojis through rustcast
 
 ### Planned:
 
