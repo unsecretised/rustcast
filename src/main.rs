@@ -5,8 +5,8 @@ mod commands;
 mod config;
 mod haptics;
 mod macos;
-mod unit_conversion;
 mod styles;
+mod unit_conversion;
 mod utils;
 
 use std::path::Path;
