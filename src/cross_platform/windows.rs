@@ -85,35 +85,27 @@ fn get_apps_from_known_folder(apps: &mut Vec<App>) {
             .into_iter()
             .filter_map(|e| e.ok())
             .filter(|e| e.path().extension().is_some_and(|ext| ext == "exe"))
-        {
-            use crate::{app::apps::AppCommand, commands::Function};
+            .map(|entry| {
+                let path = entry.path();
+                let file_name = path.file_name().unwrap().to_string_lossy();
+                let name = file_name.replace(".exe", "");
 
-            // only in debug builds since it's chonky and this is run a *lot*
-            #[cfg(debug_assertions)]
-            tracing::trace!("App added [kfolder]: {}", entry.path().display());
+                #[cfg(debug_assertions)]
+                tracing::trace!("Executable loaded [kfolder]: {:?}", path.to_str());
 
-            apps.push(App {
-                open_command: AppCommand::Function(Function::OpenApp(
-                    entry.path().to_string_lossy().to_string(),
-                )),
-                name: entry
-                    .clone()
-                    .file_name()
-                    .to_string_lossy()
-                    .to_string()
-                    .replace(".exe", ""),
-                name_lc: entry
-                    .clone()
-                    .file_name()
-                    .to_string_lossy()
-                    .to_string()
-                    .to_lowercase()
-                    .replace(".exe", ""),
-                icons: None,
-                desc: "TODO: Implement".to_string(),
-            });
-        }
-    }
+                App {
+                    open_command: AppCommand::Function(Function::OpenApp(
+                        path.to_string_lossy().to_string(),
+                    )),
+                    name: name.clone(),
+                    name_lc: name.to_lowercase(),
+                    icons: None,
+                    desc: "TODO: Implement".to_string(),
+                }
+            }).collect::<Vec<_>>()
+        }).collect();
+
+        apps.extend(found_apps);
 }
 fn get_known_paths() -> Vec<String> {
     let paths = vec![

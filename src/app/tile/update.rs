@@ -23,11 +23,8 @@ use crate::app::apps::AppCommand;
 use crate::app::default_settings;
 use crate::app::menubar::menu_icon;
 use crate::app::tile::AppIndex;
-#[cfg(target_os = "windows")]
-use crate::app::tile::elm::default_app_paths;
 use crate::app::{Message, Page, tile::Tile};
 
-use crate::app::{Message, Page, tile::Tile};
 #[cfg(target_os = "windows")]
 use crate::utils::get_config_installation_dir;
 

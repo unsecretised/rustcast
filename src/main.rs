@@ -47,21 +47,27 @@ fn main() -> iced::Result {
         
         let log_file = tracing_subscriber::fmt::layer()
             .with_ansi(false)
-            .with_filter(LevelFilter::DEBUG)
-            .with_writer(file);
+            .with_writer(file)
+            .with_filter(LevelFilter::DEBUG);
         let vv_log_file = tracing_subscriber::fmt::layer()
             .with_ansi(false)
             .with_writer(vv_file);
-        let console_out = tracing_subscriber::fmt::layer().with_filter(LevelFilter::INFO);
+        let console_out = tracing_subscriber::fmt::layer()
+            .with_filter(LevelFilter::INFO);
 
         let subscriber = tracing_subscriber::registry()
             .with(log_file)
-            .with(vv_file)
+            .with(vv_log_file)
             .with(console_out);
 
         tracing::subscriber::set_global_default(subscriber).expect("Error initing tracing");
-        tracing::info!("Log file at: {}", &log_path);
+
+        tracing::info!("Main log file at    : {}", &vv_log_path);
+        tracing::info!("Verbose log file at : {}", &log_path);
+        tracing::info!("Config file at      : {}", &file_path);
     }
+
+    tracing::debug!("Loaded config data: {:#?}", &config);
 
     let manager = GlobalHotKeyManager::new().unwrap();
 
@@ -80,7 +86,7 @@ fn main() -> iced::Result {
             tracing::warn!("Couldn't register hotkey {}", key)
         }
     } else if let Err(e) = result {
-        tracing::error!("{}", e.to_string())
+        tracing::error!("{}", e.to_string());
     }
 
     tracing::info!("Starting.");
