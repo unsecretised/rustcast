@@ -51,13 +51,21 @@ pub fn menu_icon(hotkey: HotKey, sender: ExtSender) -> TrayIcon {
 }
 
 fn get_image() -> DynamicImage {
-    let image_path = if cfg!(debug_assertions) && !cfg!(target_os = "macos") {
-        "docs/icon.png"
-    } else {
-        "/Applications/Rustcast.app/Contents/Resources/icon.png"
-    };
+    #[cfg(target_os = "macos")]
+    {
+        let image_path = if cfg!(debug_assertions) && !cfg!(target_os = "macos") {
+            "docs/icon.png"
+        } else {
+            "/Applications/Rustcast.app/Contents/Resources/icon.png"
+        };
 
-    ImageReader::open(image_path).unwrap().decode().unwrap()
+        ImageReader::open(image_path).unwrap().decode().unwrap()
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        DynamicImage::ImageRgba8(image::RgbaImage::from_pixel(64, 64, image::Rgba([0, 0, 0, 255])))
+    }
 }
 
 fn init_event_handler(sender: ExtSender, hotkey_id: u32) {
