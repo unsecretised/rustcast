@@ -36,7 +36,7 @@ use crate::clipboard::ClipBoardContentType;
 use crate::commands::Function;
 use crate::config::Config;
 use crate::unit_conversion;
-https://github.com/unsecretised/rustcast/pull/113/conflict?name=src%252Fcross_platform%252Fwindows.rs&ancestor_oid=68e807100a8921fa1fc6c5f6a77737eb2839a64e&base_oid=5f515f5bc8a6ecbef17e85c334b3fa678b6c5bc8&head_oid=da79aee567002566c8056ced3edcb4d9cd022828use crate::utils::get_installed_apps;
+use crate::utils::get_installed_apps;
 
 use crate::utils::is_valid_url;
 #[cfg(target_os = "macos")]
