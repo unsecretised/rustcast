@@ -44,7 +44,7 @@ fn main() -> iced::Result {
 
         let file = File::create(&log_path).expect("Failed to create logfile");
         let vv_file = File::create(&vv_log_path).expect("Failed to create logfile");
-        
+
         let log_file = tracing_subscriber::fmt::layer()
             .with_ansi(false)
             .with_writer(file)
@@ -52,8 +52,7 @@ fn main() -> iced::Result {
         let vv_log_file = tracing_subscriber::fmt::layer()
             .with_ansi(false)
             .with_writer(vv_file);
-        let console_out = tracing_subscriber::fmt::layer()
-            .with_filter(LevelFilter::INFO);
+        let console_out = tracing_subscriber::fmt::layer().with_filter(LevelFilter::INFO);
 
         let subscriber = tracing_subscriber::registry()
             .with(log_file)
@@ -99,4 +98,4 @@ fn main() -> iced::Result {
     .subscription(Tile::subscription)
     .theme(Tile::theme)
     .run()
-        }
+}

@@ -1,6 +1,8 @@
 use {
+    crate::app::apps::App,
+    rayon::prelude::*,
+    std::path::PathBuf,
     tracing::Level,
-    crate::app::apps::App, rayon::prelude::*, std::path::PathBuf,
     windows::{
         Win32::{
             System::Com::CoTaskMemFree,
@@ -13,8 +15,7 @@ use {
             },
         },
         core::GUID,
-    }
-
+    },
 };
 
 fn get_apps_from_registry(apps: &mut Vec<App>) {
@@ -75,37 +76,40 @@ fn get_apps_from_registry(apps: &mut Vec<App>) {
 }
 fn get_apps_from_known_folder(apps: &mut Vec<App>) {
     let paths = get_known_paths();
-    use walkdir::WalkDir;
     use crate::{app::apps::AppCommand, commands::Function};
+    use walkdir::WalkDir;
 
+    let found_apps: Vec<App> = paths
+        .par_iter()
+        .flat_map(|path| {
+            WalkDir::new(path)
+                .follow_links(false)
+                .into_iter()
+                .filter_map(|e| e.ok())
+                .filter(|e| e.path().extension().is_some_and(|ext| ext == "exe"))
+                .map(|entry| {
+                    let path = entry.path();
+                    let file_name = path.file_name().unwrap().to_string_lossy();
+                    let name = file_name.replace(".exe", "");
 
-    let found_apps: Vec<App> = paths.par_iter().flat_map(|path| {
-        WalkDir::new(path)
-            .follow_links(false)
-            .into_iter()
-            .filter_map(|e| e.ok())
-            .filter(|e| e.path().extension().is_some_and(|ext| ext == "exe"))
-            .map(|entry| {
-                let path = entry.path();
-                let file_name = path.file_name().unwrap().to_string_lossy();
-                let name = file_name.replace(".exe", "");
+                    #[cfg(debug_assertions)]
+                    tracing::trace!("Executable loaded [kfolder]: {:?}", path.to_str());
 
-                #[cfg(debug_assertions)]
-                tracing::trace!("Executable loaded [kfolder]: {:?}", path.to_str());
+                    App {
+                        open_command: AppCommand::Function(Function::OpenApp(
+                            path.to_string_lossy().to_string(),
+                        )),
+                        name: name.clone(),
+                        name_lc: name.to_lowercase(),
+                        icons: None,
+                        desc: "TODO: Implement".to_string(),
+                    }
+                })
+                .collect::<Vec<_>>()
+        })
+        .collect();
 
-                App {
-                    open_command: AppCommand::Function(Function::OpenApp(
-                        path.to_string_lossy().to_string(),
-                    )),
-                    name: name.clone(),
-                    name_lc: name.to_lowercase(),
-                    icons: None,
-                    desc: "TODO: Implement".to_string(),
-                }
-            }).collect::<Vec<_>>()
-        }).collect();
-
-        apps.extend(found_apps);
+    apps.extend(found_apps);
 }
 fn get_known_paths() -> Vec<String> {
     let paths = vec![

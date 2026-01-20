@@ -64,7 +64,11 @@ fn get_image() -> DynamicImage {
 
     #[cfg(target_os = "windows")]
     {
-        DynamicImage::ImageRgba8(image::RgbaImage::from_pixel(64, 64, image::Rgba([0, 0, 0, 255])))
+        DynamicImage::ImageRgba8(image::RgbaImage::from_pixel(
+            64,
+            64,
+            image::Rgba([0, 0, 0, 255]),
+        ))
     }
 }
 

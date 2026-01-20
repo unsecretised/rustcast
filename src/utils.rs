@@ -28,7 +28,8 @@ use crate::{
 
 /// This converts an icns file to an iced image handle
 pub(crate) fn handle_from_icns(path: &Path) -> Option<Handle> {
-    #[cfg(target_os = "macos")] {
+    #[cfg(target_os = "macos")]
+    {
         let data = std::fs::read(path).ok()?;
         let family = IconFamily::read(std::io::Cursor::new(&data)).ok()?;
 
@@ -48,7 +49,6 @@ pub(crate) fn handle_from_icns(path: &Path) -> Option<Handle> {
     }
     None
 }
-
 
 /// Open the settings file with the system default editor
 pub fn open_settings() {

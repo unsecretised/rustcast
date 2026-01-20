@@ -13,8 +13,8 @@ use iced::{Length::Fill, widget::text_input};
 use rayon::slice::ParallelSliceMut;
 
 use crate::app::tile::AppIndex;
-use crate::utils::get_installed_apps;
 use crate::styles::{contents_style, rustcast_text_input_style};
+use crate::utils::get_installed_apps;
 use crate::{
     app::{Message, Page, apps::App, default_settings, tile::Tile},
     config::Config,
@@ -57,17 +57,14 @@ pub fn new(hotkey: HotKey, config: &Config) -> (Tile, Task<Message>) {
         let pos = open_on_focused_monitor();
         settings.position = Position::Specific(pos);
     }
-    
 
     let (id, open) = window::open(settings);
 
     let open: Task<iced::window::Id> = open.discard();
-    
+
     #[cfg(target_os = "macos")]
     open.chain(window::run(id, |handle| {
-        macos::macos_window_config(
-            &handle.window_handle().expect("Unable to get window handle"),
-        );
+        macos::macos_window_config(&handle.window_handle().expect("Unable to get window handle"));
         transform_process_to_ui_element();
     }));
 
