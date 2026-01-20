@@ -1,7 +1,7 @@
 use {
     tracing::Level,
+    crate::app::apps::App, rayon::prelude::*, std::path::PathBuf,
     windows::{
-    crate::app::apps::App, rayon::prelude::*, std::path::PathBuf, windows::{
         Win32::{
             System::Com::CoTaskMemFree,
             UI::{
