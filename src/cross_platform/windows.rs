@@ -67,7 +67,7 @@ fn get_apps_from_registry(apps: &mut Vec<App>) {
                     name: display_name.clone().into_string().unwrap(),
                     name_lc: display_name.clone().into_string().unwrap().to_lowercase(),
                     icons: None,
-                    desc: "TODO: Implement".to_string(),
+                    desc: "Application".to_string(),
                 })
             }
         });
