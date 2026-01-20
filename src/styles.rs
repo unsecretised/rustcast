@@ -87,3 +87,35 @@ pub fn result_row_container_style(tile: &ConfigTheme, focused: bool) -> containe
         ..Default::default()
     }
 }
+
+pub fn emoji_button_container_style(tile_theme: &ConfigTheme, focused: bool) -> container::Style {
+    let base = tile_theme.bg_color();
+    let row_bg = if focused {
+        with_alpha(tint(base, 0.10), 1.0)
+    } else {
+        with_alpha(tint(base, 0.04), 1.0)
+    };
+    container::Style {
+        background: Some(Background::Color(row_bg)),
+        text_color: Some(tile_theme.text_color(1.)),
+        border: Border {
+            color: tile_theme.text_color(0.8),
+            width: 0.3,
+            radius: Radius::new(10),
+        },
+        ..Default::default()
+    }
+}
+
+pub fn emoji_button_style(tile_theme: &ConfigTheme) -> button::Style {
+    button::Style {
+        background: Some(Background::Color(tint(tile_theme.bg_color(), 0.02))),
+        text_color: tile_theme.text_color(1.),
+        border: Border {
+            color: tile_theme.text_color(0.8),
+            width: 0.3,
+            radius: Radius::new(10),
+        },
+        ..Default::default()
+    }
+}

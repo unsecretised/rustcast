@@ -4,6 +4,7 @@ use crate::{app::tile::ExtSender, clipboard::ClipBoardContentType};
 
 pub mod apps;
 pub mod menubar;
+pub mod pages;
 pub mod tile;
 
 use iced::window::{self, Id, Settings};

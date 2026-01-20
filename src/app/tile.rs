@@ -143,6 +143,12 @@ impl Tile {
                         keyboard::Key::Named(Named::ArrowUp) => {
                             return Some(Message::ChangeFocus(ArrowKey::Up));
                         }
+                        keyboard::Key::Named(Named::ArrowLeft) => {
+                            return Some(Message::ChangeFocus(ArrowKey::Left));
+                        }
+                        keyboard::Key::Named(Named::ArrowRight) => {
+                            return Some(Message::ChangeFocus(ArrowKey::Right));
+                        }
                         keyboard::Key::Named(Named::ArrowDown) => {
                             return Some(Message::ChangeFocus(ArrowKey::Down));
                         }

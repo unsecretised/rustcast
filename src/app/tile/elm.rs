@@ -15,6 +15,7 @@ use rayon::{
     slice::ParallelSliceMut,
 };
 
+use crate::app::pages::emoji::emoji_page;
 use crate::app::tile::AppIndex;
 use crate::styles::{contents_style, rustcast_text_input_style};
 use crate::{
@@ -119,11 +120,24 @@ pub fn view(tile: &Tile, wid: window::Id) -> Element<'_, Message> {
                             .render(tile.config.theme.clone(), i as u32, tile.focus_id)
                     }),
             )
+            .into()
+        } else if tile.results.is_empty() {
+            space().into()
+        } else if tile.page == Page::EmojiSearch {
+            emoji_page(
+                tile.config.theme.clone(),
+                tile.emoji_apps
+                    .search_prefix(&tile.query_lc)
+                    .map(|x| x.to_owned())
+                    .collect(),
+                tile.focus_id,
+            )
         } else {
             Column::from_iter(tile.results.iter().enumerate().map(|(i, app)| {
                 app.clone()
                     .render(tile.config.theme.clone(), i as u32, tile.focus_id)
             }))
+            .into()
         };
 
         let scrollable = Scrollable::with_direction(results, scrollbar_direction).id("results");

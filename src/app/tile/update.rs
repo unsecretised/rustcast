@@ -65,6 +65,10 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
         }
 
         Message::EscKeyPressed(id) => {
+            if tile.page == Page::EmojiSearch && !tile.query_lc.is_empty() {
+                return Task::none();
+            }
+
             if tile.query_lc.is_empty() {
                 Task::batch([
                     Task::done(Message::HideWindow(id)),
@@ -95,10 +99,24 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
 
         Message::ChangeFocus(key) => {
             let u32_len = tile.results.len() as u32;
+            let change_by = match tile.page {
+                Page::EmojiSearch => 4,
+                _ => 1,
+            };
             if u32_len > 0 {
-                match key {
-                    ArrowKey::Down => tile.focus_id = (tile.focus_id + 1) % u32_len,
-                    ArrowKey::Up => tile.focus_id = (tile.focus_id + u32_len - 1) % u32_len,
+                match (key, &tile.page) {
+                    (ArrowKey::Left, Page::EmojiSearch) => {
+                        tile.focus_id = (tile.focus_id + u32_len - 1) % u32_len;
+                        return operation::focus("results");
+                    }
+                    (ArrowKey::Right, Page::EmojiSearch) => {
+                        tile.focus_id = (tile.focus_id + u32_len + 1) % u32_len;
+                        return operation::focus("results");
+                    }
+                    (ArrowKey::Down, _) => tile.focus_id = (tile.focus_id + change_by) % u32_len,
+                    (ArrowKey::Up, _) => {
+                        tile.focus_id = (tile.focus_id + u32_len - change_by) % u32_len
+                    }
                     _ => {}
                 }
 
@@ -106,7 +124,14 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
                     "results",
                     AbsoluteOffset {
                         x: None,
-                        y: Some(tile.focus_id as f32 * 55.),
+                        y: Some(
+                            tile.focus_id as f32
+                                * if tile.page == Page::EmojiSearch {
+                                    20.
+                                } else {
+                                    55.
+                                },
+                        ),
                     },
                 )
             } else {
@@ -333,7 +358,6 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
             } else if tile.query_lc == "main" {
                 tile.page = Page::Main
             }
-
             tile.handle_search_query_changed();
 
             if tile.results.is_empty()
@@ -419,12 +443,16 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
                     .collect();
             }
 
+            if !tile.query_lc.is_empty() && tile.page == Page::EmojiSearch {
+                tile.results = tile
+                    .emoji_apps
+                    .search_prefix("")
+                    .map(|x| x.to_owned())
+                    .collect();
+            }
+
             let new_length = tile.results.len();
             let max_elem = min(5, new_length);
-
-            if tile.results == vec![] {
-                tile.page = Page::ClipboardHistory;
-            }
 
             if prev_size != new_length && tile.page != Page::ClipboardHistory {
                 Task::batch([
