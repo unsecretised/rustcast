@@ -11,11 +11,14 @@ pub enum ClipBoardContentType {
 }
 
 impl ClipBoardContentType {
-    /// Returns the iced element for rendering the clipboard item
+    /// Returns the iced element for rendering the clipboard item, and the entire content since the
+    /// display name is only the first line
     pub fn to_app(&self) -> App {
         let name = match self {
             ClipBoardContentType::Image(_) => "<img>".to_string(),
-            ClipBoardContentType::Text(a) => a.to_owned(),
+            ClipBoardContentType::Text(a) => {
+                a.lines().next().unwrap_or(a.as_str()).to_string()
+            }
         };
 
         let self_clone = self.clone();
@@ -26,7 +29,7 @@ impl ClipBoardContentType {
             )),
             desc: "Clipboard Item".to_string(),
             icons: None,
-            name_lc: name.to_lowercase(),
+            name_lc: name.clone(),
             name,
         }
     }

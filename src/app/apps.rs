@@ -53,7 +53,7 @@ impl App {
     /// A vec of all the emojis as App structs
     pub fn emoji_apps() -> Vec<App> {
         emojis::iter()
-            .filter(|x| x.unicode_version() < emojis::UnicodeVersion::new(13, 0))
+            .filter(|x| x.unicode_version() < emojis::UnicodeVersion::new(17, 13))
             .map(|x| App {
                 icons: None,
                 name: x.to_string(),

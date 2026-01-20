@@ -100,7 +100,7 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
         Message::ChangeFocus(key) => {
             let u32_len = tile.results.len() as u32;
             let change_by = match tile.page {
-                Page::EmojiSearch => 4,
+                Page::EmojiSearch => 6,
                 _ => 1,
             };
             if u32_len > 0 {
@@ -466,12 +466,11 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
                     Task::done(Message::ChangeFocus(ArrowKey::Left)),
                 ])
             } else if tile.page == Page::ClipboardHistory {
-                let element_count = min(tile.clipboard_content.len(), 5);
                 window::resize(
                     id,
                     iced::Size {
                         width: WINDOW_WIDTH,
-                        height: ((element_count * 70) + DEFAULT_WINDOW_HEIGHT as usize) as f32,
+                        height: (350 + DEFAULT_WINDOW_HEIGHT as usize) as f32,
                     },
                 )
             } else {

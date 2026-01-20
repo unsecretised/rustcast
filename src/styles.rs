@@ -100,7 +100,7 @@ pub fn emoji_button_container_style(tile_theme: &ConfigTheme, focused: bool) -> 
         text_color: Some(tile_theme.text_color(1.)),
         border: Border {
             color: tile_theme.text_color(0.8),
-            width: 0.3,
+            width: 0.,
             radius: Radius::new(10),
         },
         ..Default::default()
@@ -113,7 +113,7 @@ pub fn emoji_button_style(tile_theme: &ConfigTheme) -> button::Style {
         text_color: tile_theme.text_color(1.),
         border: Border {
             color: tile_theme.text_color(0.8),
-            width: 0.3,
+            width: 0.1,
             radius: Radius::new(10),
         },
         ..Default::default()

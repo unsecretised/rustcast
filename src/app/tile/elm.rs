@@ -15,6 +15,7 @@ use rayon::{
     slice::ParallelSliceMut,
 };
 
+use crate::app::pages::clipboard::clipboard_view;
 use crate::app::pages::emoji::emoji_page;
 use crate::app::tile::AppIndex;
 use crate::styles::{contents_style, rustcast_text_input_style};
@@ -101,8 +102,8 @@ pub fn view(tile: &Tile, wid: window::Id) -> Element<'_, Message> {
         let scrollbar_direction = if tile.config.theme.show_scroll_bar {
             Direction::Vertical(
                 Scrollbar::new()
-                    .width(2)
-                    .scroller_width(2)
+                    .width(10)
+                    .scroller_width(10)
                     .anchor(Anchor::Start),
             )
         } else {
@@ -110,17 +111,12 @@ pub fn view(tile: &Tile, wid: window::Id) -> Element<'_, Message> {
         };
 
         let results = if tile.page == Page::ClipboardHistory {
-            Column::from_iter(
-                tile.clipboard_content
-                    .iter()
-                    .enumerate()
-                    .map(|(i, content)| {
-                        content
-                            .to_app()
-                            .render(tile.config.theme.clone(), i as u32, tile.focus_id)
-                    }),
+            clipboard_view(
+                tile.clipboard_content.clone(),
+                tile.focus_id,
+                tile.config.theme.clone(),
+                tile.focus_id,
             )
-            .into()
         } else if tile.results.is_empty() {
             space().into()
         } else if tile.page == Page::EmojiSearch {
