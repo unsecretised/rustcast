@@ -1,6 +1,5 @@
 use {
-    crate::app::apps::App,
-    windows::{
+    crate::app::apps::App, rayon::prelude::*, std::path::PathBuf, windows::{
         Win32::{
             System::Com::CoTaskMemFree,
             UI::{
@@ -12,7 +11,8 @@ use {
             },
         },
         core::GUID,
-    },
+    }
+
 };
 
 fn get_apps_from_registry(apps: &mut Vec<App>) {
@@ -70,42 +70,37 @@ fn get_apps_from_registry(apps: &mut Vec<App>) {
 }
 fn get_apps_from_known_folder(apps: &mut Vec<App>) {
     let paths = get_known_paths();
+    use walkdir::WalkDir;
+    use crate::{app::apps::AppCommand, commands::Function};
 
-    for path in paths {
-        use walkdir::WalkDir;
 
-        for entry in WalkDir::new(path)
+    let found_apps: Vec<App> = paths.par_iter().flat_map(|path| {
+        WalkDir::new(path)
             .follow_links(false)
             .into_iter()
             .filter_map(|e| e.ok())
             .filter(|e| e.path().extension().is_some_and(|ext| ext == "exe"))
-        {
-            use crate::{app::apps::AppCommand, commands::Function};
+            .map(|entry| {
+                    let path = entry.path();
+                    let file_name = path.file_name().unwrap().to_string_lossy();
+                    let name = file_name.replace(".exe", "");
+
+                App {
+                        open_command: AppCommand::Function(Function::OpenApp(
+                            path.to_string_lossy().to_string(),
+                        )),
+                        name: name.clone(),
+                        name_lc: name.to_lowercase(),
+                        icons: None,
+                        desc: "TODO: Implement".to_string(),
+                    }
 
 
+            }).collect::<Vec<_>>()
+        }).collect();
 
-            apps.push(App {
-                open_command: AppCommand::Function(Function::OpenApp(
-                    entry.path().to_string_lossy().to_string(),
-                )),
-                name: entry
-                    .clone()
-                    .file_name()
-                    .to_string_lossy()
-                    .to_string()
-                    .replace(".exe", ""),
-                name_lc: entry
-                    .clone()
-                    .file_name()
-                    .to_string_lossy()
-                    .to_string()
-                    .to_lowercase()
-                    .replace(".exe", ""),
-                icons: None,
-                desc: "TODO: Implement".to_string(),
-            });
-        }
-    }
+        apps.extend(found_apps);
+
 }
 fn get_known_paths() -> Vec<String> {
     let paths = vec![
