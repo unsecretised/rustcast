@@ -57,19 +57,16 @@ pub fn new(hotkey: HotKey, config: &Config) -> (Tile, Task<Message>) {
         let pos = open_on_focused_monitor();
         settings.position = Position::Specific(pos);
     }
-
-    #[cfg(target_os = "macos")]
-    {
-        let open = open.discard().chain(window::run(id, |handle| {
+    
+    let open = open
+       .discard()
+       .chain(window::run(id, |handle| {
+            #[cfg(target_os = "macos")]
             macos::macos_window_config(
                 &handle.window_handle().expect("Unable to get window handle"),
-            );
-            transform_process_to_ui_element();
-        }));
-    }
-
-    #[cfg(target_os = "windows")]
-    let (id, open) = window::open(settings);
+           );
+          transform_process_to_ui_element();
+       }));
 
     let mut options: Vec<App> = get_installed_apps(&config);
 
