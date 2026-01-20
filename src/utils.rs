@@ -116,7 +116,7 @@ pub fn create_config_file_if_not_exists(
     }
 
     std::fs::write(
-        &file_path,
+        file_path,
         toml::to_string(&config).unwrap_or_else(|x| x.to_string()),
     )
     .unwrap();

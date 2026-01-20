@@ -334,9 +334,10 @@ fn parse_number_prefix(s: &str) -> Option<(&str, &str)> {
 
     let mut chars = s.char_indices().peekable();
     if let Some((_, c)) = chars.peek()
-        && (*c == '+' || *c == '-') {
-            chars.next();
-        }
+        && (*c == '+' || *c == '-')
+    {
+        chars.next();
+    }
 
     let mut end = 0;
     let mut has_digit = false;
