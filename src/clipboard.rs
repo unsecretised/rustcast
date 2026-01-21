@@ -15,8 +15,8 @@ impl ClipBoardContentType {
     /// display name is only the first line
     pub fn to_app(&self) -> App {
         let mut name = match self {
-            ClipBoardContentType::Image(_) => "<img>".to_string(),
-            ClipBoardContentType::Text(a) => a.to_owned(),
+            Self::Image(_) => "<img>".to_string(),
+            Self::Text(a) => a.to_owned(),
         };
 
         let self_clone = self.clone();

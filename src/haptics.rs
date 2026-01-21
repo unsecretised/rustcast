@@ -152,19 +152,18 @@ fn mts_state() -> Option<&'static MtsState> {
 /// Perform a haptic feedback - Just use this function to perform haptic feedback... please don't
 /// remake this function unless you're a genius or absolutely have to
 pub fn perform_haptic(pattern: HapticPattern) -> bool {
-    if let Some(state) = mts_state() {
-        let pat = pattern_index(pattern);
-        let mut any_ok = false;
-        unsafe {
-            for &act in &state.actuators {
-                if !act.is_null() && MTActuatorIsOpen(act) {
-                    let kr = MTActuatorActuate(act, pat, 0, 0.0, 0.0);
-                    any_ok |= kr == 0;
-                }
+    let Some(state) = mts_state() else {
+        return false;
+    };
+    let pat = pattern_index(pattern);
+    let mut any_ok = false;
+    unsafe {
+        for &act in &state.actuators {
+            if !act.is_null() && MTActuatorIsOpen(act) {
+                let kr = MTActuatorActuate(act, pat, 0, 0.0, 0.0);
+                any_ok |= kr == 0;
             }
         }
-        any_ok
-    } else {
-        false
     }
+    any_ok
 }

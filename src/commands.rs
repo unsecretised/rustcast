@@ -26,7 +26,7 @@ impl Function {
     /// Run the command
     pub fn execute(&self, config: &Config, query: &str) {
         match self {
-            Function::OpenApp(path) => {
+            Self::OpenApp(path) => {
                 let path = path.to_owned();
                 thread::spawn(move || {
                     NSWorkspace::new().openURL(&NSURL::fileURLWithPath(
@@ -34,7 +34,7 @@ impl Function {
                     ));
                 });
             }
-            Function::RunShellCommand(command, alias) => {
+            Self::RunShellCommand(command, alias) => {
                 let query = query.to_string();
                 let final_command =
                     format!(r#"{} {}"#, command, query.strip_prefix(alias).unwrap_or(""));
@@ -44,14 +44,14 @@ impl Function {
                     .spawn()
                     .ok();
             }
-            Function::RandomVar(var) => {
+            Self::RandomVar(var) => {
                 Clipboard::new()
                     .unwrap()
                     .set_text(var.to_string())
                     .unwrap_or(());
             }
 
-            Function::GoogleSearch(query_string) => {
+            Self::GoogleSearch(query_string) => {
                 let query_args = query_string.replace(" ", "+");
                 let query = config.search_url.replace("%s", &query_args);
                 let query = query.strip_suffix("?").unwrap_or(&query).to_string();
@@ -66,7 +66,7 @@ impl Function {
                 });
             }
 
-            Function::OpenWebsite(url) => {
+            Self::OpenWebsite(url) => {
                 let open = if url.starts_with("http") {
                     url.to_owned()
                 } else {
@@ -83,14 +83,14 @@ impl Function {
                 });
             }
 
-            Function::Calculate(expr) => {
+            Self::Calculate(expr) => {
                 Clipboard::new()
                     .unwrap()
                     .set_text(expr.eval().map(|x| x.to_string()).unwrap_or("".to_string()))
                     .unwrap_or(());
             }
 
-            Function::CopyToClipboard(clipboard_content) => match clipboard_content {
+            Self::CopyToClipboard(clipboard_content) => match clipboard_content {
                 ClipBoardContentType::Text(text) => {
                     Clipboard::new().unwrap().set_text(text).ok();
                 }
@@ -99,7 +99,7 @@ impl Function {
                 }
             },
 
-            Function::OpenPrefPane => {
+            Self::OpenPrefPane => {
                 thread::spawn(move || {
                     NSWorkspace::new().openURL(&NSURL::fileURLWithPath(
                         &objc2_foundation::NSString::from_str(
@@ -109,7 +109,7 @@ impl Function {
                     ));
                 });
             }
-            Function::Quit => std::process::exit(0),
+            Self::Quit => std::process::exit(0),
         }
     }
 }

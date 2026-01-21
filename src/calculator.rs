@@ -19,16 +19,16 @@ pub enum Expr {
     Number(f64),
     Unary {
         op: UnaryOp,
-        rhs: Box<Expr>,
+        rhs: Box<Self>,
     },
     Binary {
         op: BinOp,
-        lhs: Box<Expr>,
-        rhs: Box<Expr>,
+        lhs: Box<Self>,
+        rhs: Box<Self>,
     },
     Func {
         name: String,
-        args: Vec<Expr>,
+        args: Vec<Self>,
     },
 }
 
@@ -52,9 +52,9 @@ impl Expr {
         use BinOp::*;
         use UnaryOp::*;
         match self {
-            Expr::Number(x) => Some(*x),
+            Self::Number(x) => Some(*x),
 
-            Expr::Unary { op, rhs } => {
+            Self::Unary { op, rhs } => {
                 let v = rhs.eval()?;
                 Some(match op {
                     Plus => v,
@@ -62,7 +62,7 @@ impl Expr {
                 })
             }
 
-            Expr::Binary { op, lhs, rhs } => {
+            Self::Binary { op, lhs, rhs } => {
                 let a = lhs.eval()?;
                 let b = rhs.eval()?;
                 match op {
@@ -74,7 +74,7 @@ impl Expr {
                 }
             }
 
-            Expr::Func { name, args } => {
+            Self::Func { name, args } => {
                 let name = name.as_str();
                 match name {
                     "ln" => {
