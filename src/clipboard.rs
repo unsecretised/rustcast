@@ -14,14 +14,16 @@ impl ClipBoardContentType {
     /// Returns the iced element for rendering the clipboard item, and the entire content since the
     /// display name is only the first line
     pub fn to_app(&self) -> App {
-        let name = match self {
+        let mut name = match self {
             ClipBoardContentType::Image(_) => "<img>".to_string(),
-            ClipBoardContentType::Text(a) => {
-                a.lines().next().unwrap_or(a.as_str()).to_string()
-            }
+            ClipBoardContentType::Text(a) => a.to_owned(),
         };
 
         let self_clone = self.clone();
+        let name_lc = name.clone();
+
+        // only get the first line from the contents
+        name = name.lines().next().unwrap_or("").to_string();
 
         App {
             open_command: crate::app::apps::AppCommand::Function(Function::CopyToClipboard(
@@ -29,7 +31,7 @@ impl ClipBoardContentType {
             )),
             desc: "Clipboard Item".to_string(),
             icons: None,
-            name_lc: name.clone(),
+            name_lc,
             name,
         }
     }

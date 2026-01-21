@@ -296,8 +296,11 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
             }
         }
 
-        Message::ClipboardHistory(clip_content) => {
-            tile.clipboard_content.insert(0, clip_content);
+        Message::ClipboardHistory(_) => {
+            tile.clipboard_content.insert(
+                0,
+                ClipBoardContentType::Text(include_str!("../apps.rs").to_string()),
+            );
             Task::none()
         }
 
@@ -434,25 +437,6 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
                     name_lc: "".to_string(),
                 });
             }
-            if tile.results
-                == vec![App {
-                    open_command: AppCommand::Message(Message::SwitchToPage(
-                        Page::ClipboardHistory,
-                    )),
-                    desc: RUSTCAST_DESC_NAME.to_string(),
-                    icons: None,
-                    name: "Clipboard History".to_string(),
-                    name_lc: "clipboard".to_string(),
-                }]
-            {
-                tile.page = Page::ClipboardHistory;
-                tile.results = tile
-                    .clipboard_content
-                    .iter()
-                    .map(|x| x.to_app().to_owned())
-                    .collect();
-            }
-
             if !tile.query_lc.is_empty() && tile.page == Page::EmojiSearch {
                 tile.results = tile
                     .emoji_apps
@@ -461,20 +445,27 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
                     .collect();
             }
 
-            let new_length = if tile.page != Page::ClipboardHistory {
-                tile.results.len()
-            } else {
-                tile.clipboard_content.len()
-            };
+            let new_length = tile.results.len();
             let max_elem = min(5, new_length);
 
-            if prev_size != new_length {
+            if prev_size != new_length && tile.page != Page::ClipboardHistory {
                 Task::batch([
                     window::resize(
                         id,
                         iced::Size {
                             width: WINDOW_WIDTH,
                             height: ((max_elem * 55) + DEFAULT_WINDOW_HEIGHT as usize) as f32,
+                        },
+                    ),
+                    Task::done(Message::ChangeFocus(ArrowKey::Left)),
+                ])
+            } else if tile.page == Page::ClipboardHistory {
+                Task::batch([
+                    window::resize(
+                        id,
+                        iced::Size {
+                            width: WINDOW_WIDTH,
+                            height: ((7 * 55) + DEFAULT_WINDOW_HEIGHT as usize) as f32,
                         },
                     ),
                     Task::done(Message::ChangeFocus(ArrowKey::Left)),

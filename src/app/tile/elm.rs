@@ -149,7 +149,7 @@ pub fn view(tile: &Tile, wid: window::Id) -> Element<'_, Message> {
                 ..Default::default()
             });
 
-        container(contents.clip(true))
+        container(contents.clip(false))
             .style(|_| contents_style(&tile.config.theme))
             .into()
     } else {

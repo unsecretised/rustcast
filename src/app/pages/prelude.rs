@@ -1,6 +1,6 @@
 pub use iced::{
     Alignment, Background, Element, Length,
-    widget::{Button, Column, Row, Text, container, text::Wrapping},
+    widget::{Button, Column, Row, Text, container},
 };
 
 pub use crate::{
