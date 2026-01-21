@@ -1,8 +1,6 @@
 //! This has all the utility functions that rustcast uses
 use std::{
-    fs::{self},
-    path::{Path, PathBuf},
-    thread,
+    fs::{self}, io, path::{Path, PathBuf}, thread
 };
 
 use glob::{GlobError, GlobResult};
@@ -68,34 +66,18 @@ pub fn get_config_file_path() -> PathBuf {
 use crate::config::Config;
 
 pub fn read_config_file(file_path: &Path) -> anyhow::Result<Config> {
-    Ok(match std::fs::read_to_string(file_path) {
-        Ok(a) => toml::from_str(&a)?,
-        Err(_) => Config::default(),
-    })
-}
-
-pub fn create_config_file_if_not_exists(
-    file_path: &Path,
-    config: &Config,
-) -> Result<(), std::io::Error> {
-    // check if file exists
-    if let Ok(exists) = std::fs::metadata(file_path)
-        && exists.is_file()
-    {
-        return Ok(());
+    match std::fs::read_to_string(file_path) {
+        Ok(a) => Ok(toml::from_str(&a)?),
+        Err(e) if e.kind() == io::ErrorKind::NotFound => {
+            let cfg = Config::default();
+            std::fs::write(
+                file_path,
+                toml::to_string(&cfg).unwrap_or_else(|x| x.to_string()),
+            )?;
+            Ok(cfg)
+        },
+        Err(e) => Err(e.into())
     }
-
-    if let Some(parent) = file_path.parent() {
-        std::fs::create_dir_all(parent).unwrap();
-    }
-
-    std::fs::write(
-        file_path,
-        toml::to_string(&config).unwrap_or_else(|x| x.to_string()),
-    )
-    .unwrap();
-
-    Ok(())
 }
 
 pub fn open_application(path: &str) {

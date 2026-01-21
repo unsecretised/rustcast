@@ -10,10 +10,11 @@ mod utils;
 mod cross_platform;
 
 use std::env::temp_dir;
-use std::fs::File;
+use std::fs::{File, create_dir};
+use std::io;
 
 // import from utils
-use crate::utils::{create_config_file_if_not_exists, get_config_file_path, read_config_file};
+use crate::utils::{get_config_file_path, get_config_installation_dir, read_config_file};
 
 use crate::app::tile::Tile;
 
@@ -26,8 +27,22 @@ fn main() -> iced::Result {
     #[cfg(target_os = "macos")]
     cross_platform::macos::set_activation_policy_accessory();
 
-    let file_path = get_config_file_path();
+    if let Err(e) = std::fs::metadata(get_config_installation_dir().join("rustcast/")) {
+        if e.kind() == io::ErrorKind::NotFound {
+            let result = create_dir(get_config_installation_dir().join("rustcast/"));
 
+            if let Err(e) = result {
+                eprintln!("{}", e);
+                std::process::exit(1);
+            }
+        }
+        else {
+            eprintln!("{}", e);
+            std::process::exit(1);
+        }
+    }
+
+    let file_path = get_config_file_path();
     let config = read_config_file(&file_path);
     if let Err(e) = config {
         // Tracing isn't inited yet
@@ -36,13 +51,10 @@ fn main() -> iced::Result {
     }
 
     let config = config.unwrap();
-    create_config_file_if_not_exists(&file_path, &config).unwrap();
 
     {
         let log_path = temp_dir().join("rustcast/log.log");
         let vv_log_path = temp_dir().join("rustcast/vv_log.log");
-
-        create_config_file_if_not_exists(&log_path, &config).unwrap();
 
         let file = File::create(&log_path).expect("Failed to create logfile");
         let vv_file = File::create(&vv_log_path).expect("Failed to create logfile");
