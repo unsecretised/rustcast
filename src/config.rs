@@ -41,7 +41,7 @@ impl Default for Config {
             show_trayicon: true,
             shells: vec![],
             index_dirs: vec![],
-            index_skip_globs: RegexSet::empty()
+            index_skip_globs: vec![]
         }
     }
 }
