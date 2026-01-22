@@ -6,16 +6,19 @@ pub mod macos;
 #[cfg(target_os = "windows")]
 pub mod windows;
 
+/// Opens a URL in the browser
 pub fn open_url(url: &str) {
     #[cfg(target_os = "macos")]
     macos::open_url(url)
 }
 
+/// Opens the settings file
 pub fn open_settings() {
     #[cfg(target_os = "macos")]
     macos::open_settings()
 }
 
+/// Gets an iced image handle
 pub fn get_img_handle(path: &Path) -> Option<iced::widget::image::Handle>{
     #[cfg(target_os = "macos")]
     return macos::handle_from_icns(path);

@@ -17,7 +17,7 @@ use {
 };
 
 #[cfg(target_os = "windows")]
-use {crate::cross_platform::windows::get_installed_windows_apps, std::process::Command};
+use {std::process::Command};
 
 use crate::{
     app::apps::{App, AppCommand},
@@ -156,6 +156,8 @@ pub fn get_installed_apps(config: &Config) -> Vec<App> {
 
     #[cfg(target_os = "windows")]
     {
+        use crate::cross_platform::windows::app_finding::get_installed_windows_apps;
+
         tracing::debug!("Exclude patterns: {:?}", &config.index_exclude_patterns);
         tracing::debug!("Include patterns: {:?}", &config.index_include_patterns);
 
