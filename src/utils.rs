@@ -185,17 +185,3 @@ pub fn get_installed_apps(config: &Config) -> Vec<App> {
         res
     }
 }
-
-/// Check if the provided string is a valid url
-pub fn is_valid_url(s: &str) -> bool {
-    s.ends_with(".com")
-        || s.ends_with(".net")
-        || s.ends_with(".org")
-        || s.ends_with(".edu")
-        || s.ends_with(".gov")
-        || s.ends_with(".io")
-        || s.ends_with(".co")
-        || s.ends_with(".me")
-        || s.ends_with(".app")
-        || s.ends_with(".dev")
-}

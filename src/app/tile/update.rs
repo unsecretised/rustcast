@@ -35,7 +35,6 @@ use crate::config::Config;
 use crate::unit_conversion;
 use crate::utils::get_installed_apps;
 
-use crate::utils::is_valid_url;
 #[cfg(target_os = "macos")]
 use crate::{
     cross_platform::macos::focus_this_app,
@@ -44,7 +43,7 @@ use crate::{
 
 pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
     tracing::trace!("Handling update (message: {:?})", message);
-    
+
     match message {
         Message::OpenWindow => {
             #[cfg(target_os = "macos")]
@@ -104,7 +103,7 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
             }
 
             tile.query_lc = input.trim().to_lowercase();
-            tile.query = input;
+            tile.query = input.clone();
             let prev_size = tile.results.len();
             if tile.query_lc.is_empty() && tile.page != Page::ClipboardHistory {
                 tile.results = vec![];
@@ -203,7 +202,7 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
                         }
                     })
                     .collect();
-            } else if tile.results.is_empty() && is_valid_url(&tile.query) {
+            } else if tile.results.is_empty() && url::Url::parse(&input).is_ok() {
                 tile.results.push(App {
                     open_command: AppCommand::Function(Function::OpenWebsite(tile.query.clone())),
                     desc: "Web Browsing".to_string(),
