@@ -73,7 +73,7 @@ pub fn default_settings() -> Settings {
         minimizable: false,
         level: window::Level::AlwaysOnTop,
         transparent: true,
-        blur: true,
+        blur: false,
         size: iced::Size {
             width: WINDOW_WIDTH,
             height: DEFAULT_WINDOW_HEIGHT,

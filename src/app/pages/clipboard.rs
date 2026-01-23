@@ -13,7 +13,7 @@ pub fn clipboard_view(
 ) -> Element<'static, Message> {
     let theme_clone = theme.clone();
     let theme_clone_2 = theme.clone();
-    Row::from_vec(vec![
+    container(Row::from_vec(vec![
         container(
             scrollable(
                 Column::from_iter(clipboard_content.iter().enumerate().map(|(i, content)| {
@@ -23,7 +23,7 @@ pub fn clipboard_view(
             )
             .id("results"),
         )
-        .height(7 * 55)
+        .height(385)
         .style(move |_| result_row_container_style(&theme_clone_2, false))
         .into(),
         container(Scrollable::with_direction(
@@ -33,7 +33,7 @@ pub fn clipboard_view(
                     .map(|x| x.to_app().name_lc)
                     .unwrap_or("".to_string()),
             )
-            .height(Length::Fill)
+            .height(385)
             .width(Length::Fill)
             .align_x(Alignment::Start)
             .font(theme.font())
@@ -46,8 +46,8 @@ pub fn clipboard_view(
         .padding(10)
         .style(move |_| result_row_container_style(&theme_clone, false))
         .width((WINDOW_WIDTH / 3.) * 2.)
-        .height(7 * 55)
         .into(),
-    ])
+    ]))
+    .height(280)
     .into()
 }

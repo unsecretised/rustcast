@@ -1,5 +1,4 @@
 use iced::border::Radius;
-use iced::widget::text_input::Status;
 use iced::widget::{button, container};
 use iced::{Background, Border, Color, widget::text_input};
 
@@ -19,23 +18,21 @@ pub fn with_alpha(mut c: Color, a: f32) -> Color {
     c
 }
 
-pub fn rustcast_text_input_style(theme: &ConfigTheme, status: Status) -> text_input::Style {
+pub fn rustcast_text_input_style(
+    theme: &ConfigTheme,
+    round_bottom_edges: bool,
+) -> text_input::Style {
     let base_bg = theme.bg_color();
     let surface = with_alpha(tint(base_bg, 0.06), 1.0);
 
-    let (border_color, border_width) = match status {
-        text_input::Status::Focused { .. } => (theme.text_color(0.20), 1.),
-        text_input::Status::Hovered => (theme.text_color(0.20), 1.),
-        text_input::Status::Active => (theme.text_color(0.20), 1.),
-        text_input::Status::Disabled => (theme.text_color(0.20), 1.),
-    };
+    let border_color = theme.text_color(1.);
 
     text_input::Style {
         background: Background::Color(surface),
         border: Border {
             color: border_color,
-            width: border_width,
-            radius: Radius::new(5.0).bottom(0.),
+            width: 1.,
+            radius: Radius::new(15.).bottom(if round_bottom_edges { 15. } else { 0. }),
         },
         icon: theme.text_color(0.7),
         placeholder: theme.text_color(0.45),
@@ -50,7 +47,7 @@ pub fn contents_style(theme: &ConfigTheme) -> container::Style {
         text_color: None,
         border: iced::Border {
             color: theme.text_color(0.7),
-            width: 1.0,
+            width: 0.,
             radius: Radius::new(14.0),
         },
         ..Default::default()
@@ -76,12 +73,8 @@ pub fn result_row_container_style(tile: &ConfigTheme, focused: bool) -> containe
     container::Style {
         background: Some(Background::Color(row_bg)),
         border: Border {
-            color: if focused {
-                tile.text_color(0.35)
-            } else {
-                tile.text_color(0.10)
-            },
-            width: 0.2,
+            color: tile.text_color(1.),
+            width: 0.,
             radius: Radius::new(0.),
         },
         ..Default::default()
