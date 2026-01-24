@@ -104,7 +104,7 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
                 _ => tile.results.len() as u32,
             };
 
-            let old_focus_id = tile.focus_id.clone();
+            let old_focus_id = tile.focus_id;
 
             if len == 0 {
                 return Task::none();
@@ -466,7 +466,7 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
                         id,
                         iced::Size {
                             width: WINDOW_WIDTH,
-                            height: ((max_elem * 55) + DEFAULT_WINDOW_HEIGHT as usize) as f32,
+                            height: ((max_elem * 55) + 35 + DEFAULT_WINDOW_HEIGHT as usize) as f32,
                         },
                     ),
                     Task::done(Message::ChangeFocus(ArrowKey::Left)),
@@ -477,7 +477,7 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
                         id,
                         iced::Size {
                             width: WINDOW_WIDTH,
-                            height: ((7 * 55) + DEFAULT_WINDOW_HEIGHT as usize) as f32,
+                            height: ((7 * 55) + 35 + DEFAULT_WINDOW_HEIGHT as usize) as f32,
                         },
                     ),
                     Task::done(Message::ChangeFocus(ArrowKey::Left)),

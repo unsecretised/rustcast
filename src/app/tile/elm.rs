@@ -5,8 +5,8 @@ use global_hotkey::hotkey::HotKey;
 use iced::border::Radius;
 use iced::widget::scrollable::{Anchor, Direction, Scrollbar};
 use iced::widget::text::LineHeight;
-use iced::widget::{Column, Scrollable, container, space};
-use iced::{Color, window};
+use iced::widget::{Column, Row, Scrollable, Text, container, space};
+use iced::{Alignment, Color, Length, Vector, window};
 use iced::{Element, Task};
 use iced::{Length::Fill, widget::text_input};
 
@@ -15,10 +15,12 @@ use rayon::{
     slice::ParallelSliceMut,
 };
 
+use crate::app::WINDOW_WIDTH;
 use crate::app::pages::clipboard::clipboard_view;
 use crate::app::pages::emoji::emoji_page;
 use crate::app::tile::AppIndex;
-use crate::styles::{contents_style, rustcast_text_input_style};
+use crate::config::Theme;
+use crate::styles::{contents_style, rustcast_text_input_style, tint, with_alpha};
 use crate::{
     app::{Message, Page, apps::App, default_settings, tile::Tile},
     config::Config,
@@ -92,6 +94,10 @@ pub fn new(hotkey: HotKey, config: &Config) -> (Tile, Task<Message>) {
 
 pub fn view(tile: &Tile, wid: window::Id) -> Element<'_, Message> {
     if tile.visible {
+        let round_bottom_edges = match &tile.page {
+            Page::Main | Page::EmojiSearch => tile.results.is_empty(),
+            Page::ClipboardHistory => tile.clipboard_content.is_empty(),
+        };
         let title_input = text_input(tile.config.placeholder.as_str(), &tile.query)
             .on_input(move |a| Message::SearchQueryChanged(a, wid))
             .on_paste(move |a| Message::SearchQueryChanged(a, wid))
@@ -100,7 +106,7 @@ pub fn view(tile: &Tile, wid: window::Id) -> Element<'_, Message> {
             .id("query")
             .width(Fill)
             .line_height(LineHeight::Relative(1.75))
-            .style(|_, status| rustcast_text_input_style(&tile.config.theme, status))
+            .style(move |_, _| rustcast_text_input_style(&tile.config.theme, round_bottom_edges))
             .padding(20);
 
         let scrollbar_direction = if tile.config.theme.show_scroll_bar {
@@ -133,25 +139,48 @@ pub fn view(tile: &Tile, wid: window::Id) -> Element<'_, Message> {
                 tile.focus_id,
             )
         } else {
-            Column::from_iter(tile.results.iter().enumerate().map(|(i, app)| {
-                app.clone()
-                    .render(tile.config.theme.clone(), i as u32, tile.focus_id)
-            }))
+            container(Column::from_iter(tile.results.iter().enumerate().map(
+                |(i, app)| {
+                    app.clone()
+                        .render(tile.config.theme.clone(), i as u32, tile.focus_id)
+                },
+            )))
             .into()
         };
 
-        let scrollable = Scrollable::with_direction(results, scrollbar_direction).id("results");
-        let contents = container(Column::new().push(title_input).push(scrollable).spacing(0))
-            .style(|_| container::Style {
-                text_color: None,
-                background: None,
-                border: iced::Border {
-                    color: Color::WHITE,
-                    width: 1.,
-                    radius: Radius::new(5),
-                },
-                ..Default::default()
-            });
+        let results_count = match &tile.page {
+            Page::Main => tile.results.len(),
+            Page::ClipboardHistory => tile.clipboard_content.len(),
+            Page::EmojiSearch => tile.results.len(),
+        };
+
+        let height = if tile.page == Page::ClipboardHistory {
+            385
+        } else {
+            std::cmp::min(tile.results.len() * 60, 290)
+        };
+
+        let scrollable = Scrollable::with_direction(results, scrollbar_direction)
+            .id("results")
+            .height(height as u32);
+
+        let contents = container(
+            Column::new()
+                .push(title_input)
+                .push(scrollable)
+                .push(footer(tile.config.theme.clone(), results_count))
+                .spacing(0),
+        )
+        .style(|_| container::Style {
+            text_color: None,
+            background: None,
+            border: iced::Border {
+                color: Color::TRANSPARENT,
+                width: 0.,
+                radius: Radius::new(15),
+            },
+            ..Default::default()
+        });
 
         container(contents.clip(false))
             .style(|_| contents_style(&tile.config.theme))
@@ -159,4 +188,51 @@ pub fn view(tile: &Tile, wid: window::Id) -> Element<'_, Message> {
     } else {
         space().into()
     }
+}
+
+fn footer(theme: Theme, results_count: usize) -> Element<'static, Message> {
+    let text = if results_count == 0 {
+        return space().into();
+    } else if results_count == 1 {
+        "1 result found"
+    } else {
+        &format!("{} results found", results_count)
+    };
+
+    container(
+        Row::new()
+            .push(
+                Text::new(text.to_string())
+                    .size(12)
+                    .height(30)
+                    .color(theme.text_color(0.7))
+                    .font(theme.font())
+                    .align_x(Alignment::Center),
+            )
+            .padding(4)
+            .width(Fill)
+            .height(30),
+    )
+    .center(Length::Fill)
+    .width(WINDOW_WIDTH)
+    .padding(5)
+    .style(move |_| container::Style {
+        text_color: None,
+        background: Some(iced::Background::Color(with_alpha(
+            tint(theme.bg_color(), 0.04),
+            1.0,
+        ))),
+        border: iced::Border {
+            color: Color::WHITE,
+            width: 0.,
+            radius: Radius::new(15).top(0),
+        },
+        shadow: iced::Shadow {
+            color: Color::TRANSPARENT,
+            offset: Vector::ZERO,
+            blur_radius: 0.,
+        },
+        snap: false,
+    })
+    .into()
 }
