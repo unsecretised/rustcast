@@ -202,7 +202,7 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
             let is_clipboard_hotkey = tile
                 .clipboard_hotkey
                 .map(|hotkey| hotkey.id == hk_id)
-                .unwrap_or(true);
+                .unwrap_or(false);
             let is_open_hotkey = hk_id == tile.hotkey.id;
 
             let clipboard_page_task = if is_clipboard_hotkey {
