@@ -15,6 +15,8 @@ use crate::{
     utils::{open_settings, open_url},
 };
 
+const DISCORD_LINK: &str = "https://discord.gg/bDfNYPbnC5";
+
 use tokio::runtime::Runtime;
 
 /// This create a new menubar icon for the app
@@ -38,6 +40,7 @@ pub fn menu_icon(hotkey: HotKey, sender: ExtSender) -> TrayIcon {
         &get_help_item(),
         &PredefinedMenuItem::separator(),
         &open_settings_item(),
+        &discord_item(),
         &hide_tray_icon(),
         &quit_item(),
     ])
@@ -87,6 +90,9 @@ fn init_event_handler(sender: ExtSender, hotkey_id: u32) {
                         .unwrap();
                 });
             }
+            "open_discord" => {
+                open_url(DISCORD_LINK);
+            }
             "open_help_page" => {
                 open_url("https://github.com/unsecretised/rustcast/discussions/new?category=q-a");
             }
@@ -104,6 +110,10 @@ fn init_event_handler(sender: ExtSender, hotkey_id: u32) {
 fn version_item() -> MenuItem {
     let version = "Version: ".to_string() + option_env!("APP_VERSION").unwrap_or("Unknown");
     MenuItem::new(version, false, None)
+}
+
+fn discord_item() -> MenuItem {
+    MenuItem::with_id("open_discord", "RustCast discord", true, None)
 }
 
 fn hide_tray_icon() -> MenuItem {
