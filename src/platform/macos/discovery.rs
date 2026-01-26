@@ -17,7 +17,7 @@ use core::{
 use std::sync::LazyLock;
 
 use objc2_core_foundation::{CFArray, CFRetained, CFURL};
-use objc2_foundation::{NSBundle, NSString, NSURL, ns_string};
+use objc2_foundation::{NSBundle, NSNumber, NSString, NSURL, ns_string};
 use rayon::iter::{IntoParallelIterator, ParallelIterator as _};
 
 use crate::{
@@ -172,6 +172,23 @@ fn query_app(url: impl AsRef<NSURL>, store_icons: bool) -> Option<App> {
             .ok()
             .map(|s| s.to_string())
     };
+
+    let is_truthy = |key: &NSString| -> bool {
+        info.objectForKey(key)
+            .map(|v| {
+                // Check for boolean true or string "1"/"YES"
+                v.downcast_ref::<NSNumber>().is_some_and(|n| n.boolValue())
+                    || v.downcast_ref::<NSString>().is_some_and(|s| {
+                        s.to_string() == "1" || s.to_string().eq_ignore_ascii_case("YES")
+                    })
+            })
+            .unwrap_or(false)
+    };
+
+    // Filter out background-only apps (daemons, agents, internal system apps)
+    if is_truthy(ns_string!("LSUIElement")) || is_truthy(ns_string!("LSBackgroundOnly")) {
+        return None;
+    }
 
     let name = get_string(ns_string!("CFBundleDisplayName"))
         .or_else(|| get_string(ns_string!("CFBundleName")))
