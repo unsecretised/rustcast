@@ -1,16 +1,16 @@
 //! This handles the update logic for the tile (AKA rustcast's main window)
 use std::cmp::min;
 use std::fs;
+#[cfg(target_os = "macos")]
 use std::path::Path;
 use std::thread;
 
 use iced::Task;
+#[cfg(target_os = "macos")]
 use iced::widget::image::Handle;
 use iced::widget::operation;
 use iced::widget::operation::AbsoluteOffset;
 use iced::window;
-use rayon::iter::IntoParallelRefIterator;
-use rayon::iter::ParallelIterator;
 use rayon::slice::ParallelSliceMut;
 
 use crate::app::ArrowKey;
@@ -23,26 +23,34 @@ use crate::app::apps::AppCommand;
 use crate::app::default_settings;
 use crate::app::menubar::menu_icon;
 use crate::app::tile::AppIndex;
-use crate::app::tile::elm::default_app_paths;
+use crate::app::{Message, Page, tile::Tile};
+
+#[cfg(target_os = "windows")]
+use crate::utils::get_config_installation_dir;
+
 use crate::calculator::Expr;
 use crate::clipboard::ClipBoardContentType;
 use crate::commands::Function;
 use crate::config::Config;
-use crate::haptics::HapticPattern;
-use crate::haptics::perform_haptic;
 use crate::unit_conversion;
 use crate::utils::get_installed_apps;
+
 use crate::utils::is_valid_url;
+#[cfg(target_os = "macos")]
 use crate::{
-    app::{Message, Page, tile::Tile},
-    macos::focus_this_app,
+    cross_platform::macos::focus_this_app,
+    cross_platform::macos::haptics::{HapticPattern, perform_haptic},
 };
 
 pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
+    tracing::debug!("Handling update (message: {:?})", message);
     match message {
         Message::OpenWindow => {
-            tile.capture_frontmost();
-            focus_this_app();
+            #[cfg(target_os = "macos")]
+            {
+                tile.capture_frontmost();
+                focus_this_app();
+            }
             tile.focused = true;
             tile.visible = true;
             Task::none()
@@ -439,6 +447,7 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
                     name_lc: String::new(),
                 });
             } else if tile.results.is_empty() && tile.query_lc == "lemon" {
+                #[cfg(target_os = "macos")]
                 tile.results.push(App {
                     open_command: AppCommand::Display,
                     desc: "Easter Egg".to_string(),

@@ -23,6 +23,7 @@ pub struct Config {
     pub haptic_feedback: bool,
     pub show_trayicon: bool,
     pub shells: Vec<Shelly>,
+    pub index_dirs: Vec<String>,
 }
 
 impl Default for Config {
@@ -38,6 +39,7 @@ impl Default for Config {
             haptic_feedback: false,
             show_trayicon: true,
             shells: vec![],
+            index_dirs: vec![],
         }
     }
 }

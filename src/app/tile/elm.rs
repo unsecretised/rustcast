@@ -10,55 +10,73 @@ use iced::{Alignment, Color, Length, Vector, window};
 use iced::{Element, Task};
 use iced::{Length::Fill, widget::text_input};
 
-use rayon::{
-    iter::{IntoParallelRefIterator, ParallelIterator},
-    slice::ParallelSliceMut,
-};
+use rayon::slice::ParallelSliceMut;
 
 use crate::app::WINDOW_WIDTH;
 use crate::app::pages::clipboard::clipboard_view;
 use crate::app::pages::emoji::emoji_page;
 use crate::app::tile::AppIndex;
+use crate::utils::get_installed_apps;
 use crate::config::Theme;
 use crate::styles::{contents_style, rustcast_text_input_style, tint, with_alpha};
 use crate::{
     app::{Message, Page, apps::App, default_settings, tile::Tile},
     config::Config,
-    macos::{self, transform_process_to_ui_element},
-    utils::get_installed_apps,
 };
 
+#[cfg(target_os = "macos")]
+use crate::cross_platform::macos::{self, transform_process_to_ui_element};
+
 pub fn default_app_paths() -> Vec<String> {
-    let user_local_path = std::env::var("HOME").unwrap() + "/Applications/";
+    #[cfg(target_os = "macos")]
+    {
+        let user_local_path = std::env::var("HOME").unwrap() + "/Applications/";
 
-    let paths = vec![
-        "/Applications/".to_string(),
-        user_local_path,
-        "/System/Applications/".to_string(),
-        "/System/Applications/Utilities/".to_string(),
-    ];
+        let paths = vec![
+            "/Applications/".to_string(),
+            user_local_path,
+            "/System/Applications/".to_string(),
+            "/System/Applications/Utilities/".to_string(),
+        ];
+        paths
+    }
 
-    paths
+    #[cfg(target_os = "windows")]
+    {
+        Vec::new()
+    }
 }
 
 /// Initialise the base window
 pub fn new(hotkey: HotKey, config: &Config) -> (Tile, Task<Message>) {
-    let (id, open) = window::open(default_settings());
+    #[allow(unused_mut)]
+    let mut settings = default_settings();
 
+    // get normal settings and modify position
+    #[cfg(target_os = "windows")]
+    {
+        use iced::window::Position;
+
+        use crate::cross_platform::windows::open_on_focused_monitor;
+        let pos = open_on_focused_monitor();
+        settings.position = Position::Specific(pos);
+    }
+
+    // id unused on windows, but not macos
+    #[cfg_attr(target_os = "windows", allow(unused))]
+    let (id, open) = window::open(settings);
+
+    #[cfg(target_os = "windows")]
+    let open: Task<iced::window::Id> = open.discard();
+
+    #[cfg(target_os = "macos")]
     let open = open.discard().chain(window::run(id, |handle| {
         macos::macos_window_config(&handle.window_handle().expect("Unable to get window handle"));
         transform_process_to_ui_element();
+        Message::OpenWindow
     }));
 
-    let store_icons = config.theme.show_icons;
-
-    let paths = default_app_paths();
-
-    let mut options: Vec<App> = paths
-        .par_iter()
-        .map(|path| get_installed_apps(path, store_icons))
-        .flatten()
-        .collect();
+    let mut options: Vec<App> = get_installed_apps(config);
 
     options.extend(config.shells.iter().map(|x| x.to_app()));
     options.extend(App::basic_apps());
@@ -88,7 +106,7 @@ pub fn new(hotkey: HotKey, config: &Config) -> (Tile, Task<Message>) {
             sender: None,
             page: Page::Main,
         },
-        Task::batch([open.map(|_| Message::OpenWindow)]),
+        open,
     )
 }
 

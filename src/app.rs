@@ -1,5 +1,7 @@
 //! Main logic for the app
 use crate::commands::Function;
+use iced::window::{self, Id, Settings};
+
 use crate::{app::tile::ExtSender, clipboard::ClipBoardContentType};
 
 pub mod apps;
@@ -7,7 +9,6 @@ pub mod menubar;
 pub mod pages;
 pub mod tile;
 
-use iced::window::{self, Id, Settings};
 /// The default window width
 pub const WINDOW_WIDTH: f32 = 500.;
 
@@ -81,3 +82,12 @@ pub fn default_settings() -> Settings {
         ..Default::default()
     }
 }
+
+//            Message::ReloadConfig => {
+//                self.config = toml::from_str(
+//                    &fs::read_to_string(get_config_file_path()).unwrap_or("".to_owned()),
+//                )
+//                .unwrap();
+//
+//                Task::none()
+//            }

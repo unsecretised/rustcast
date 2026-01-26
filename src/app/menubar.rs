@@ -1,7 +1,8 @@
 //! This has the menubar icon logic for the app
 
 use global_hotkey::hotkey::{Code, HotKey, Modifiers};
-use image::{DynamicImage, ImageReader};
+use image::DynamicImage;
+use tokio::runtime::Runtime;
 use tray_icon::{
     Icon, TrayIcon, TrayIconBuilder,
     menu::{
@@ -12,7 +13,7 @@ use tray_icon::{
 
 use crate::{
     app::{Message, tile::ExtSender},
-    utils::{open_settings, open_url},
+    cross_platform::{open_settings, open_url},
 };
 
 const DISCORD_LINK: &str = "https://discord.gg/bDfNYPbnC5";
@@ -54,16 +55,31 @@ pub fn menu_icon(hotkey: HotKey, sender: ExtSender) -> TrayIcon {
 }
 
 fn get_image() -> DynamicImage {
-    let image_path = if cfg!(debug_assertions) {
-        "docs/icon.png"
-    } else {
-        "/Applications/Rustcast.app/Contents/Resources/icon.png"
-    };
+    #[cfg(target_os = "macos")]
+    {
+        use image::ImageReader;
 
-    ImageReader::open(image_path).unwrap().decode().unwrap()
+        let image_path = if cfg!(debug_assertions) && !cfg!(target_os = "macos") {
+            "docs/icon.png"
+        } else {
+            "/Applications/Rustcast.app/Contents/Resources/icon.png"
+        };
+
+        ImageReader::open(image_path).unwrap().decode().unwrap()
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        DynamicImage::ImageRgba8(image::RgbaImage::from_pixel(
+            64,
+            64,
+            image::Rgba([0, 0, 0, 255]),
+        ))
+    }
 }
 
 fn init_event_handler(sender: ExtSender, hotkey_id: u32) {
+    tracing::debug!("Initing event handler");
     let runtime = Runtime::new().unwrap();
 
     MenuEvent::set_event_handler(Some(move |x: MenuEvent| {

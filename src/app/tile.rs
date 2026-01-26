@@ -2,12 +2,17 @@
 pub mod elm;
 pub mod update;
 
+#[cfg(target_os = "windows")]
+use {
+    windows::Win32::Foundation::HWND, windows::Win32::UI::WindowsAndMessaging::SetForegroundWindow,
+};
+
 use crate::app::apps::App;
 use crate::app::tile::elm::default_app_paths;
 use crate::app::{ArrowKey, Message, Move, Page};
 use crate::clipboard::ClipBoardContentType;
 use crate::config::Config;
-use crate::utils::open_settings;
+use crate::cross_platform::open_settings;
 
 use arboard::Clipboard;
 use global_hotkey::hotkey::HotKey;
@@ -23,7 +28,9 @@ use iced::{
 };
 use iced::{event, window};
 
+#[cfg(target_os = "macos")]
 use objc2::rc::Retained;
+#[cfg(target_os = "macos")]
 use objc2_app_kit::NSRunningApplication;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use tray_icon::TrayIcon;
@@ -95,7 +102,10 @@ pub struct Tile {
     emoji_apps: AppIndex,
     visible: bool,
     focused: bool,
+    #[cfg(target_os = "macos")]
     frontmost: Option<Retained<NSRunningApplication>>,
+    #[cfg(target_os = "windows")]
+    frontmost: Option<HWND>,
     pub config: Config,
     /// The opening hotkey
     hotkey: HotKey,
@@ -224,21 +234,41 @@ impl Tile {
         self.results = results;
     }
 
-    /// Gets the frontmost application to focus later.
+    // Unused, keeping it for now
     pub fn capture_frontmost(&mut self) {
-        use objc2_app_kit::NSWorkspace;
+        #[cfg(target_os = "macos")]
+        {
+            use objc2_app_kit::NSWorkspace;
 
-        let ws = NSWorkspace::sharedWorkspace();
-        self.frontmost = ws.frontmostApplication();
+            let ws = NSWorkspace::sharedWorkspace();
+            self.frontmost = ws.frontmostApplication();
+        };
+
+        #[cfg(target_os = "windows")]
+        {
+            self.frontmost = Some(unsafe { GetForegroundWindow() });
+        }
     }
 
     /// Restores the frontmost application.
     #[allow(deprecated)]
     pub fn restore_frontmost(&mut self) {
-        use objc2_app_kit::NSApplicationActivationOptions;
+        #[cfg(target_os = "macos")]
+        {
+            if let Some(app) = self.frontmost.take() {
+                use objc2_app_kit::NSApplicationActivationOptions;
 
-        if let Some(app) = self.frontmost.take() {
-            app.activateWithOptions(NSApplicationActivationOptions::ActivateIgnoringOtherApps);
+                app.activateWithOptions(NSApplicationActivationOptions::ActivateIgnoringOtherApps);
+            }
+        }
+
+        #[cfg(target_os = "windows")]
+        {
+            if let Some(handle) = self.frontmost {
+                unsafe {
+                    let _ = SetForegroundWindow(handle);
+                }
+            }
         }
     }
 }
@@ -341,10 +371,9 @@ fn handle_clipboard_history() -> impl futures::Stream<Item = Message> {
 fn handle_recipient() -> impl futures::Stream<Item = Message> {
     stream::channel(100, async |mut output| {
         let (sender, mut recipient) = channel(100);
-        output
-            .send(Message::SetSender(ExtSender(sender)))
-            .await
-            .expect("Sender not sent");
+        let msg = Message::SetSender(ExtSender(sender));
+        tracing::debug!("Sending ExtSender");
+        output.send(msg).await.expect("Sender not sent");
         loop {
             let abcd = recipient
                 .try_next()
