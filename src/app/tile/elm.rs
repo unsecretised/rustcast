@@ -16,9 +16,9 @@ use crate::app::WINDOW_WIDTH;
 use crate::app::pages::clipboard::clipboard_view;
 use crate::app::pages::emoji::emoji_page;
 use crate::app::tile::AppIndex;
-use crate::utils::get_installed_apps;
 use crate::config::Theme;
 use crate::styles::{contents_style, rustcast_text_input_style, tint, with_alpha};
+use crate::utils::get_installed_apps;
 use crate::{
     app::{Message, Page, apps::App, default_settings, tile::Tile},
     config::Config,
@@ -45,6 +45,17 @@ pub fn default_app_paths() -> Vec<String> {
     {
         Vec::new()
     }
+
+    #[cfg(target_os = "linux")]
+    {
+        let user_local_path = dirs::home_dir().unwrap().join(".local/share/applications/");
+        vec![
+            "/usr/share/applications/".to_string(),
+            "/usr/local/share/applications/".to_string(),
+            "/nix/store/*/share/applications/".to_string(),
+            user_local_path.to_string_lossy().to_string(),
+        ]
+    }
 }
 
 /// Initialise the base window
@@ -68,6 +79,11 @@ pub fn new(hotkey: HotKey, config: &Config) -> (Tile, Task<Message>) {
 
     #[cfg(target_os = "windows")]
     let open: Task<iced::window::Id> = open.discard();
+
+    #[cfg(target_os = "linux")]
+    let open = open.discard().chain(window::run(id, |_| {
+        Message::OpenWindow
+    }));
 
     #[cfg(target_os = "macos")]
     let open = open.discard().chain(window::run(id, |handle| {
@@ -97,6 +113,7 @@ pub fn new(hotkey: HotKey, config: &Config) -> (Tile, Task<Message>) {
                 .clipboard_hotkey
                 .clone()
                 .and_then(|x| x.parse::<HotKey>().ok()),
+            #[cfg(target_os = "macos")]
             frontmost: None,
             focused: false,
             config: config.clone(),

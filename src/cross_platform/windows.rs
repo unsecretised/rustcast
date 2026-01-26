@@ -175,3 +175,13 @@ pub fn open_on_focused_monitor() -> iced::Point {
 
     iced::Point { x, y }
 }
+
+pub fn open_url(url: &str) {
+    let url = url.to_owned();
+    thread::spawn(move || {
+        Command::new("powershell")
+            .args(["-Command", &format!("Start-Process {}", url)])
+            .status()
+            .ok();
+        });
+}

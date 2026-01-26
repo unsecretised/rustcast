@@ -18,8 +18,6 @@ use crate::{
 
 const DISCORD_LINK: &str = "https://discord.gg/bDfNYPbnC5";
 
-use tokio::runtime::Runtime;
-
 /// This create a new menubar icon for the app
 pub fn menu_icon(hotkey: HotKey, sender: ExtSender) -> TrayIcon {
     let builder = TrayIconBuilder::new();
@@ -68,7 +66,8 @@ fn get_image() -> DynamicImage {
         ImageReader::open(image_path).unwrap().decode().unwrap()
     }
 
-    #[cfg(target_os = "windows")]
+    // TODO: make it load the image
+    #[cfg(any(target_os = "windows", target_os = "linux"))]
     {
         DynamicImage::ImageRgba8(image::RgbaImage::from_pixel(
             64,

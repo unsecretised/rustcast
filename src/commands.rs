@@ -1,7 +1,7 @@
 //! This handles all the different commands that rustcast can perform, such as opening apps,
 //! copying to clipboard, etc.
 use std::process::Command;
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "linux"))]
 use std::thread;
 
 use arboard::Clipboard;
@@ -10,6 +10,7 @@ use objc2_app_kit::NSWorkspace;
 #[cfg(target_os = "macos")]
 use objc2_foundation::NSURL;
 
+use crate::cross_platform;
 use crate::utils::open_application;
 use crate::{calculator::Expr, clipboard::ClipBoardContentType, config::Config};
 
@@ -55,24 +56,24 @@ impl Function {
             Function::GoogleSearch(query_string) => {
                 let query_args = query_string.replace(" ", "+");
                 let query = config.search_url.replace("%s", &query_args);
-                let query = query.strip_suffix("?").unwrap_or(&query);
+                let query = query.strip_suffix("?").unwrap_or(&query).to_string();
 
-                #[cfg(target_os = "windows")]
-                {
-                    Command::new("powershell")
-                        .args(["-Command", &format!("Start-Process {}", query)])
-                        .status()
-                        .ok();
-                }
+                cross_platform::open_url(&query);
+                
 
                 #[cfg(target_os = "macos")]
                 NSWorkspace::new().openURL(
                     &NSURL::URLWithString_relativeToURL(
-                        &objc2_foundation::NSString::from_str(query),
+                        &objc2_foundation::NSString::from_str(&query),
                         None,
                     )
                     .unwrap(),
                 );
+
+                #[cfg(target_os = "linux")]
+                thread::spawn(move || {
+                    Command::new("xdg-open").arg(query).spawn().unwrap();
+                });
             }
 
             #[cfg(target_os = "macos")]
@@ -93,6 +94,19 @@ impl Function {
                     );
                 });
             }
+
+            Function::OpenWebsite(url) => {
+                use crate::cross_platform;
+
+                let open_url = if url.starts_with("http") {
+                    url.to_owned()
+                } else {
+                    format!("https://{}", url)
+                };
+
+                cross_platform::open_url(url);
+            }
+
 
             Function::Calculate(expr) => {
                 Clipboard::new()

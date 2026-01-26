@@ -1,10 +1,13 @@
 //! This has all the utility functions that rustcast uses
+#[cfg(target_os = "linux")]
+use std::os::unix::fs::PermissionsExt;
 use std::{
     fs::{self},
     path::{Path, PathBuf},
     thread,
 };
 
+#[cfg(any(target_os = "macos", target_os = "linux"))]
 use iced::widget::image::Handle;
 #[cfg(target_os = "macos")]
 use icns::IconFamily;
@@ -16,7 +19,13 @@ use {
 };
 
 #[cfg(target_os = "windows")]
-use {crate::cross_platform::windows::get_installed_windows_apps, std::process::Command};
+use crate::cross_platform::windows::get_installed_windows_apps;
+
+#[cfg(target_os = "linux")]
+use crate::cross_platform::linux::get_installed_linux_apps;
+
+#[cfg(any(target_os = "windows", target_os = "linux"))]
+use std::process::Command;
 
 use crate::{
     app::apps::{App, AppCommand},
@@ -44,6 +53,16 @@ pub(crate) fn handle_from_icns(path: &Path) -> Option<Handle> {
         image.height(),
         image.into_raw(),
     ));
+}
+
+#[cfg(target_os = "linux")]
+pub(crate) fn handle_from_icns(path: &Path) -> Option<Handle> {
+    use image::ImageReader;
+
+    let img = ImageReader::open(path).ok()?.decode().ok()?.to_rgb8();
+
+    Some(Handle::from_rgba(
+            img.width(), img.height(), img.into_raw()))
 }
 
 pub fn get_config_installation_dir() -> PathBuf {
@@ -167,6 +186,9 @@ pub fn index_dirs_from_config(apps: &mut Vec<App>) -> bool {
                     || path.extension().and_then(|s| s.to_str()) == Some("app")
             };
 
+            #[cfg(target_os = "linux")]
+            let is_executable = metadata.is_file() && (metadata.permissions().mode() & 0o111 != 0);
+
             if is_executable {
                 let display_name = path.file_name().unwrap().to_string_lossy().to_string();
                 apps.push(App {
@@ -197,6 +219,11 @@ pub fn get_installed_apps(config: &Config) -> Vec<App> {
     #[cfg(target_os = "windows")]
     {
         get_installed_windows_apps()
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        get_installed_linux_apps(config)
     }
 }
 

@@ -190,11 +190,7 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
                 Err(_) => return Task::none(),
             };
 
-            let mut new_options: Vec<App> = default_app_paths()
-                .par_iter()
-                .map(|path| get_installed_apps(path, new_config.theme.show_icons))
-                .flatten()
-                .collect();
+            let mut new_options: Vec<App> = get_installed_apps(&new_config);
 
             new_options.extend(new_config.shells.iter().map(|x| x.to_app()));
             new_options.extend(App::basic_apps());
