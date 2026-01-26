@@ -92,7 +92,7 @@ impl Function {
 
             Function::CopyToClipboard(clipboard_content) => match clipboard_content {
                 ClipBoardContentType::Text(text) => {
-                    Clipboard::new().unwrap().set_text(text).ok();
+                    Clipboard::new().unwrap().set_text(text.as_ref()).ok();
                 }
                 ClipBoardContentType::Image(img) => {
                     Clipboard::new().unwrap().set_image(img.to_owned_img()).ok();

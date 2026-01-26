@@ -1,4 +1,5 @@
 use std::{
+    borrow::Cow,
     fs,
     path::{Path, PathBuf},
     process::exit,
@@ -142,10 +143,9 @@ fn discover_apps(
         let name = file_name.strip_suffix(".app").unwrap().to_string();
         Some(App {
             open_command: AppCommand::Function(Function::OpenApp(path_str)),
-            desc: "Application".to_string(),
+            desc: Cow::Borrowed("Application"),
             icons,
-            name_lc: name.to_lowercase(),
-            name,
+            name: Cow::Owned(name),
         })
     })
 }

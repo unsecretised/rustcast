@@ -25,12 +25,13 @@ use iced::{event, window};
 use objc2::rc::Retained;
 use objc2_app_kit::NSRunningApplication;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
+use skim::{fuzzy_matcher::FuzzyMatcher, prelude::SkimMatcherV2};
 use tray_icon::TrayIcon;
 
-use std::fs;
-use std::ops::Bound;
+use std::{borrow::Cow, fs};
+
+use std::path::Path;
 use std::time::Duration;
-use std::{collections::BTreeMap, path::Path};
 
 /// This is a wrapper around the sender to disable dropping
 #[derive(Clone, Debug)]
@@ -42,52 +43,52 @@ impl Drop for ExtSender {
 }
 
 /// All the indexed apps that rustcast can search for
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 struct AppIndex {
-    by_name: BTreeMap<String, App>,
+    apps: Vec<App>,
+    matcher: SkimMatcherV2,
 }
 
 impl AppIndex {
-    /// Search for an element in the index that starts with the provided prefix
-    fn search_prefix<'a>(&'a self, prefix: &'a str) -> impl Iterator<Item = &'a App> + 'a {
-        self.by_name
-            .range::<str, _>((Bound::Included(prefix), Bound::Unbounded))
-            .take_while(move |(k, _)| k.starts_with(prefix))
-            .map(|(_, v)| v)
+    fn search(&self, pattern: &str) -> Vec<(i64, &App)> {
+        let mut selected: Vec<_> = self
+            .apps
+            .iter()
+            .filter_map(|app| self.matcher.fuzzy_match(&app.name, pattern).zip(Some(app)))
+            .collect();
+        selected.sort_by(|(score1, _), (score2, _)| score2.cmp(score1));
+
+        selected
     }
 
     /// Factory function for creating
-    pub fn from_apps(options: Vec<App>) -> Self {
-        let mut bmap = BTreeMap::new();
-        for app in options {
-            bmap.insert(app.name_lc.clone(), app);
+    pub fn from_apps(apps: Vec<App>) -> Self {
+        Self {
+            apps,
+            matcher: SkimMatcherV2::default(),
         }
-
-        AppIndex { by_name: bmap }
     }
 }
 
 /// This is the base window, and its a "Tile"
 /// Its fields are:
-/// - Theme ([`iced::Theme`])
-/// - Query (String)
-/// - Query Lowercase (String, but lowercase)
-/// - Previous Query Lowercase (String)
-/// - Results (Vec<[`App`]>) the results of the search
-/// - Options (Vec<[`App`]>) the options to search through
-/// - Visible (bool) whether the window is visible or not
-/// - Focused (bool) whether the window is focused or not
-/// - Frontmost ([`Option<Retained<NSRunningApplication>>`]) the frontmost application before the window was opened
-/// - Config ([`Config`]) the app's config
-/// - Open Hotkey ID (`u32`) the id of the hotkey that opens the window
-/// - Clipboard Content (`Vec<`[`ClipBoardContentType`]`>`) all of the cliboard contents
-/// - Page ([`Page`]) the current page of the window (main or clipboard history)
-#[derive(Clone)]
+/// - Theme ([`iced::Theme`]).
+/// - Query (String).
+/// - Query Lowercase (String, but lowercase).
+/// - Previous Query Lowercase (String).
+/// - Results (Vec<[`App`]>) the results of the search.
+/// - Options (Vec<[`App`]>) the options to search through.
+/// - Visible (bool) whether the window is visible or not.
+/// - Focused (bool) whether the window is focused or not.
+/// - Frontmost ([`Option<Retained<NSRunningApplication>>`]) the frontmost application before the window was opened.
+/// - Config ([`Config`]) the app's config.
+/// - Open Hotkey ID (`u32`) the id of the hotkey that opens the window.
+/// - Clipboard Content (`Vec<`[`ClipBoardContentType`]`>`) all of the cliboard contents.
+/// - Page ([`Page`]) the current page of the window (main or clipboard history).
 pub struct Tile {
     pub theme: iced::Theme,
     pub focus_id: u32,
     pub query: String,
-    query_lc: String,
     results: Vec<App>,
     options: AppIndex,
     emoji_apps: AppIndex,
@@ -206,7 +207,6 @@ impl Tile {
     /// should be separated out to make it easier to test. This function is called by the `update`
     /// function to handle the search query changed event.
     pub fn handle_search_query_changed(&mut self) {
-        let query = self.query_lc.clone();
         let options = if self.page == Page::Main {
             &self.options
         } else if self.page == Page::EmojiSearch {
@@ -214,12 +214,14 @@ impl Tile {
         } else {
             &AppIndex::from_apps(vec![])
         };
-        let results: Vec<App> = options
-            .search_prefix(&query)
-            .map(|x| x.to_owned())
-            .collect();
 
-        self.results = results;
+        self.results.clear();
+        self.results.extend(
+            options
+                .search(&self.query)
+                .into_iter()
+                .map(|(_, app)| app.clone()),
+        );
     }
 
     /// Gets the frontmost application to focus later.
@@ -316,8 +318,8 @@ fn handle_clipboard_history() -> impl futures::Stream<Item = Message> {
         loop {
             let byte_rep = if let Ok(a) = clipboard.get_image() {
                 Some(ClipBoardContentType::Image(a))
-            } else if let Ok(a) = clipboard.get_text() {
-                Some(ClipBoardContentType::Text(a))
+            } else if let Ok(value) = clipboard.get_text() {
+                Some(ClipBoardContentType::Text(Cow::Owned(value)))
             } else {
                 None
             };

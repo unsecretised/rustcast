@@ -1,8 +1,8 @@
 //! This handles the update logic for the tile (AKA rustcast's main window)
-use std::cmp::min;
 use std::fs;
 use std::path::Path;
 use std::thread;
+use std::{borrow::Cow, cmp::min};
 
 use iced::Task;
 use iced::widget::image::Handle;
@@ -56,11 +56,11 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
         }
 
         Message::EscKeyPressed(id) => {
-            if tile.page == Page::EmojiSearch && !tile.query_lc.is_empty() {
+            if tile.page == Page::EmojiSearch && !tile.query.is_empty() {
                 return Task::none();
             }
 
-            if tile.query_lc.is_empty() {
+            if tile.query.is_empty() {
                 Task::batch([
                     Task::done(Message::HideWindow(id)),
                     Task::done(Message::ReturnFocus),
@@ -83,7 +83,6 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
         }
 
         Message::ClearSearchQuery => {
-            tile.query_lc = String::new();
             tile.query = String::new();
             Task::none()
         }
@@ -91,7 +90,7 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
         Message::ChangeFocus(key) => {
             let len = match tile.page {
                 Page::ClipboardHistory => tile.clipboard_content.len() as u32,
-                Page::EmojiSearch => tile.emoji_apps.search_prefix(&tile.query_lc).count() as u32, // or tile.results.len()
+                Page::EmojiSearch => tile.emoji_apps.search(&tile.query).len() as u32,
                 _ => tile.results.len() as u32,
             };
 
@@ -268,11 +267,9 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
             match update_query_char {
                 Move::Forwards(query_char) => {
                     tile.query += &query_char.clone();
-                    tile.query_lc += &query_char.clone().to_lowercase();
                 }
                 Move::Back => {
                     tile.query.pop();
-                    tile.query_lc.pop();
                 }
             }
             let updated_query = tile.query.clone();
@@ -309,10 +306,9 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
                 perform_haptic(HapticPattern::Alignment);
             }
 
-            tile.query_lc = input.trim().to_lowercase();
             tile.query = input;
             let prev_size = tile.results.len();
-            if tile.query_lc.is_empty() && tile.page != Page::ClipboardHistory {
+            if tile.query.is_empty() && tile.page != Page::ClipboardHistory {
                 tile.results = vec![];
                 return window::resize(
                     id,
@@ -321,14 +317,13 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
                         height: DEFAULT_WINDOW_HEIGHT,
                     },
                 );
-            } else if tile.query_lc == "randomvar" {
+            } else if tile.query.eq_ignore_ascii_case("randomvar") {
                 let rand_num = rand::random_range(0..100);
                 tile.results = vec![App {
                     open_command: AppCommand::Function(Function::RandomVar(rand_num)),
-                    desc: "Easter egg".to_string(),
+                    desc: Cow::Borrowed("Easter egg"),
                     icons: None,
-                    name: rand_num.to_string(),
-                    name_lc: String::new(),
+                    name: Cow::Owned(rand_num.to_string()),
                 }];
                 return window::resize(
                     id,
@@ -337,13 +332,12 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
                         height: 55. + DEFAULT_WINDOW_HEIGHT,
                     },
                 );
-            } else if tile.query_lc == "67" {
+            } else if tile.query.eq_ignore_ascii_case("67") {
                 tile.results = vec![App {
                     open_command: AppCommand::Function(Function::RandomVar(67)),
-                    desc: "Easter egg".to_string(),
+                    desc: Cow::Borrowed("Easter egg"),
                     icons: None,
-                    name: 67.to_string(),
-                    name_lc: String::new(),
+                    name: Cow::Borrowed("67"),
                 }];
                 return window::resize(
                     id,
@@ -352,34 +346,35 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
                         height: 55. + DEFAULT_WINDOW_HEIGHT,
                     },
                 );
-            } else if tile.query_lc.ends_with("?") {
+            } else if tile.query.ends_with("?") {
                 tile.results = vec![App {
                     open_command: AppCommand::Function(Function::GoogleSearch(tile.query.clone())),
                     icons: None,
-                    desc: "Web Search".to_string(),
-                    name: format!("Search for: {}", tile.query),
-                    name_lc: String::new(),
+                    desc: Cow::Borrowed("Web Search"),
+                    name: Cow::Owned(format!("Search for: {}", tile.query)),
                 }];
                 return window::resize(
                     id,
                     iced::Size::new(WINDOW_WIDTH, 55. + DEFAULT_WINDOW_HEIGHT),
                 );
-            } else if tile.query_lc == "cbhist" {
+            } else if tile.query.eq_ignore_ascii_case("cbhist") {
                 tile.page = Page::ClipboardHistory
-            } else if tile.query_lc == "main" {
+            } else if tile.query.eq_ignore_ascii_case("main") {
                 tile.page = Page::Main
             }
             tile.handle_search_query_changed();
 
             if tile.results.is_empty()
-                && let Some(res) = Expr::from_str(&tile.query).ok()
+                && let Some(expr) = Expr::from_str(&tile.query).ok()
             {
                 tile.results.push(App {
-                    open_command: AppCommand::Function(Function::Calculate(res.clone())),
-                    desc: RUSTCAST_DESC_NAME.to_string(),
+                    open_command: AppCommand::Function(Function::Calculate(expr.clone())),
+                    desc: Cow::Borrowed(RUSTCAST_DESC_NAME),
                     icons: None,
-                    name: res.eval().map(|x| x.to_string()).unwrap_or("".to_string()),
-                    name_lc: "".to_string(),
+                    name: expr
+                        .eval()
+                        .map(|result| Cow::Owned(result.to_string()))
+                        .unwrap_or(Cow::Borrowed("")),
                 });
             } else if tile.results.is_empty()
                 && let Some(conversions) = unit_conversion::convert_query(&tile.query)
@@ -399,47 +394,44 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
                         );
                         App {
                             open_command: AppCommand::Function(Function::CopyToClipboard(
-                                ClipBoardContentType::Text(target.clone()),
+                                ClipBoardContentType::Text(Cow::Owned(target.clone())),
                             )),
-                            desc: source,
+                            desc: Cow::Owned(source),
                             icons: None,
-                            name: target,
-                            name_lc: String::new(),
+                            name: Cow::Owned(target),
                         }
                     })
                     .collect();
             } else if tile.results.is_empty() && is_valid_url(&tile.query) {
                 tile.results.push(App {
                     open_command: AppCommand::Function(Function::OpenWebsite(tile.query.clone())),
-                    desc: "Web Browsing".to_string(),
+                    desc: Cow::Borrowed("Web Browsing"),
                     icons: None,
-                    name: "Open Website: ".to_string() + &tile.query,
-                    name_lc: "".to_string(),
+                    name: Cow::Owned(format!("Open Website: {}", tile.query)),
                 });
-            } else if tile.query_lc.split(' ').count() > 1 {
+            } else if tile.query.split_whitespace().count() > 1 {
                 tile.results.push(App {
                     open_command: AppCommand::Function(Function::GoogleSearch(tile.query.clone())),
                     icons: None,
-                    desc: "Web Search".to_string(),
-                    name: format!("Search for: {}", tile.query),
-                    name_lc: String::new(),
+                    desc: Cow::Borrowed("Web Search"),
+                    name: Cow::Owned(format!("Search for: {}", tile.query)),
                 });
-            } else if tile.results.is_empty() && tile.query_lc == "lemon" {
+            } else if tile.results.is_empty() && tile.query.eq_ignore_ascii_case("lemon") {
                 tile.results.push(App {
                     open_command: AppCommand::Display,
-                    desc: "Easter Egg".to_string(),
+                    desc: Cow::Borrowed("Easter Egg"),
                     icons: Some(Handle::from_path(Path::new(
                         "/Applications/Rustcast.app/Contents/Resources/lemon.png",
                     ))),
-                    name: "Lemon".to_string(),
-                    name_lc: "".to_string(),
+                    name: Cow::Borrowed("Lemon"),
                 });
             }
-            if !tile.query_lc.is_empty() && tile.page == Page::EmojiSearch {
+            if !tile.query.is_empty() && tile.page == Page::EmojiSearch {
                 tile.results = tile
                     .emoji_apps
-                    .search_prefix("")
-                    .map(|x| x.to_owned())
+                    .search("")
+                    .into_iter()
+                    .map(|(_, app)| app.clone())
                     .collect();
             }
 

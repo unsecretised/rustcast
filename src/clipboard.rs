@@ -1,4 +1,6 @@
 //! This has all the logic regarding the cliboard history
+use std::borrow::Cow;
+
 use arboard::ImageData;
 
 use crate::{app::apps::App, commands::Function};
@@ -6,7 +8,7 @@ use crate::{app::apps::App, commands::Function};
 /// The kinds of clipboard content that rustcast can handle and their contents
 #[derive(Debug, Clone)]
 pub enum ClipBoardContentType {
-    Text(String),
+    Text(Cow<'static, str>),
     Image(ImageData<'static>),
 }
 
@@ -14,24 +16,23 @@ impl ClipBoardContentType {
     /// Returns the iced element for rendering the clipboard item, and the entire content since the
     /// display name is only the first line
     pub fn to_app(&self) -> App {
-        let mut name = match self {
-            ClipBoardContentType::Image(_) => "<img>".to_string(),
-            ClipBoardContentType::Text(a) => a.to_owned(),
+        let name = match self {
+            ClipBoardContentType::Image(_) => Cow::Borrowed("<img>"),
+            ClipBoardContentType::Text(text) => text.clone(),
         };
 
-        let self_clone = self.clone();
-        let name_lc = name.clone();
+        let this = self.clone();
 
         // only get the first line from the contents
-        name = name.lines().next().unwrap_or("").to_string();
+        let name = name
+            .lines()
+            .next()
+            .map_or_else(|| Cow::Borrowed(""), |line| Cow::Owned(line.to_owned()));
 
         App {
-            open_command: crate::app::apps::AppCommand::Function(Function::CopyToClipboard(
-                self_clone.to_owned(),
-            )),
-            desc: "Clipboard Item".to_string(),
+            open_command: crate::app::apps::AppCommand::Function(Function::CopyToClipboard(this)),
+            desc: Cow::Borrowed("Clipboard Item"),
             icons: None,
-            name_lc,
             name,
         }
     }
