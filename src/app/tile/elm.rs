@@ -45,7 +45,6 @@ pub fn new(hotkey: HotKey, config: &Config) -> (Tile, Task<Message>) {
     (
         Tile {
             query: String::new(),
-            query_lc: String::new(),
             focus_id: 0,
             results: vec![],
             options,
@@ -110,8 +109,9 @@ pub fn view(tile: &Tile, wid: window::Id) -> Element<'_, Message> {
             emoji_page(
                 tile.config.theme.clone(),
                 tile.emoji_apps
-                    .search_prefix(&tile.query_lc)
-                    .map(|x| x.to_owned())
+                    .search(&tile.query)
+                    .into_iter()
+                    .map(|(_, app)| app.clone())
                     .collect(),
                 tile.focus_id,
             )

@@ -15,6 +15,7 @@ use core::{
     ptr::{self, NonNull},
 };
 use std::{
+    borrow::Cow,
     env,
     path::{Path, PathBuf},
     sync::LazyLock,
@@ -250,9 +251,8 @@ fn query_app(url: impl AsRef<NSURL>, store_icons: bool) -> Option<App> {
         .flatten();
 
     Some(App {
-        name: name.clone(),
-        name_lc: name.to_lowercase(),
-        desc: "Application".to_string(),
+        name: Cow::Owned(name),
+        desc: Cow::Borrowed("Application"),
         icons,
         open_command: AppCommand::Function(Function::OpenApp(path.to_string_lossy().into_owned())),
     })

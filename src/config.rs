@@ -1,5 +1,5 @@
 //! This is the config file type definitions for rustcast
-use std::{path::Path, sync::Arc};
+use std::{borrow::Cow, path::Path, sync::Arc};
 
 use iced::{Font, font::Family, theme::Custom, widget::image::Handle};
 use serde::{Deserialize, Serialize};
@@ -168,14 +168,13 @@ pub struct Shelly {
     command: String,
     icon_path: Option<String>,
     alias: String,
-    alias_lc: String,
 }
 
 impl Shelly {
     /// Converts the shelly struct to an app so that it can be added to the app list
     pub fn to_app(&self) -> App {
-        let self_clone = self.clone();
-        let icon = self_clone.icon_path.and_then(|x| {
+        let this = self.clone();
+        let icon = this.icon_path.and_then(|x| {
             let x = x.replace("~", &std::env::var("HOME").unwrap());
             if x.ends_with(".icns") {
                 handle_from_icns(Path::new(&x))
@@ -183,15 +182,15 @@ impl Shelly {
                 Some(Handle::from_path(Path::new(&x)))
             }
         });
+
         App {
             open_command: AppCommand::Function(Function::RunShellCommand(
-                self_clone.command,
-                self_clone.alias_lc.clone(),
+                this.command,
+                this.alias.clone(),
             )),
-            desc: "Shell Command".to_string(),
+            desc: Cow::Borrowed("Shell Command"),
             icons: icon,
-            name: self_clone.alias,
-            name_lc: self_clone.alias_lc,
+            name: Cow::Owned(this.alias),
         }
     }
 }

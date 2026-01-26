@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use iced::widget::{
     Scrollable, scrollable,
     scrollable::{Direction, Scrollbar},
@@ -30,8 +32,8 @@ pub fn clipboard_view(
             Text::new(
                 clipboard_content
                     .get(focussed_id as usize)
-                    .map(|x| x.to_app().name_lc)
-                    .unwrap_or("".to_string()),
+                    .map(|entry| entry.to_app().name)
+                    .unwrap_or(Cow::Borrowed("")),
             )
             .height(385)
             .width(Length::Fill)

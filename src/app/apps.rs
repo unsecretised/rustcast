@@ -1,7 +1,7 @@
 //! This modules handles the logic for each "app" that rustcast can load
 //!
 //! An "app" is effectively, one of the results that rustcast returns when you search for something
-use std::path::Path;
+use std::{borrow::Cow, path::Path};
 
 use iced::{
     Alignment,
@@ -34,18 +34,14 @@ pub enum AppCommand {
 #[derive(Debug, Clone)]
 pub struct App {
     pub open_command: AppCommand,
-    pub desc: String,
+    pub desc: Cow<'static, str>,
     pub icons: Option<iced::widget::image::Handle>,
-    pub name: String,
-    pub name_lc: String,
+    pub name: Cow<'static, str>,
 }
 
 impl PartialEq for App {
     fn eq(&self, other: &Self) -> bool {
-        self.name_lc == other.name_lc
-            && self.icons == other.icons
-            && self.desc == other.desc
-            && self.name == other.name
+        self.icons == other.icons && self.desc == other.desc && self.name == other.name
     }
 }
 
@@ -54,14 +50,13 @@ impl App {
     pub fn emoji_apps() -> Vec<App> {
         emojis::iter()
             .filter(|x| x.unicode_version() < emojis::UnicodeVersion::new(17, 13))
-            .map(|x| App {
+            .map(|emoji| App {
                 icons: None,
-                name: x.to_string(),
-                name_lc: x.name().to_string(),
+                name: Cow::Borrowed(emoji.as_str()),
                 open_command: AppCommand::Function(Function::CopyToClipboard(
-                    ClipBoardContentType::Text(x.to_string()),
+                    ClipBoardContentType::Text(Cow::Borrowed(emoji.as_str())),
                 )),
-                desc: x.name().to_string(),
+                desc: Cow::Borrowed(emoji.name()),
             })
             .collect()
     }
@@ -72,57 +67,51 @@ impl App {
         vec![
             App {
                 open_command: AppCommand::Function(Function::Quit),
-                desc: RUSTCAST_DESC_NAME.to_string(),
+                desc: Cow::Borrowed(RUSTCAST_DESC_NAME),
                 icons: handle_from_icns(Path::new(
                     "/Applications/Rustcast.app/Contents/Resources/icon.icns",
                 )),
-                name: "Quit RustCast".to_string(),
-                name_lc: "quit".to_string(),
+                name: Cow::Borrowed("Quit RustCast"),
             },
             App {
                 open_command: AppCommand::Function(Function::OpenPrefPane),
-                desc: RUSTCAST_DESC_NAME.to_string(),
+                desc: Cow::Borrowed(RUSTCAST_DESC_NAME),
                 icons: handle_from_icns(Path::new(
                     "/Applications/Rustcast.app/Contents/Resources/icon.icns",
                 )),
-                name: "Open RustCast Preferences".to_string(),
-                name_lc: "settings".to_string(),
+                name: Cow::Borrowed("Open RustCast Preferences"),
             },
             App {
                 open_command: AppCommand::Message(Message::SwitchToPage(Page::EmojiSearch)),
-                desc: RUSTCAST_DESC_NAME.to_string(),
+                desc: Cow::Borrowed(RUSTCAST_DESC_NAME),
                 icons: handle_from_icns(Path::new(
                     "/Applications/Rustcast.app/Contents/Resources/icon.icns",
                 )),
-                name: "Search for an Emoji".to_string(),
-                name_lc: "emoji".to_string(),
+                name: Cow::Borrowed("Search for an Emoji"),
             },
             App {
                 open_command: AppCommand::Message(Message::SwitchToPage(Page::ClipboardHistory)),
-                desc: RUSTCAST_DESC_NAME.to_string(),
+                desc: Cow::Borrowed(RUSTCAST_DESC_NAME),
                 icons: handle_from_icns(Path::new(
                     "/Applications/Rustcast.app/Contents/Resources/icon.icns",
                 )),
-                name: "Clipboard History".to_string(),
-                name_lc: "clipboard".to_string(),
+                name: Cow::Borrowed("Clipboard History"),
             },
             App {
                 open_command: AppCommand::Message(Message::ReloadConfig),
-                desc: RUSTCAST_DESC_NAME.to_string(),
+                desc: Cow::Borrowed(RUSTCAST_DESC_NAME),
                 icons: handle_from_icns(Path::new(
                     "/Applications/Rustcast.app/Contents/Resources/icon.icns",
                 )),
-                name: "Reload RustCast".to_string(),
-                name_lc: "refresh".to_string(),
+                name: Cow::Borrowed("Reload RustCast"),
             },
             App {
                 open_command: AppCommand::Display,
-                desc: RUSTCAST_DESC_NAME.to_string(),
+                desc: Cow::Borrowed(RUSTCAST_DESC_NAME),
                 icons: handle_from_icns(Path::new(
                     "/Applications/Rustcast.app/Contents/Resources/icon.icns",
                 )),
-                name: format!("Current RustCast Version: {app_version}"),
-                name_lc: "version".to_string(),
+                name: Cow::Owned(format!("Current RustCast Version: {app_version}")),
             },
         ]
     }
