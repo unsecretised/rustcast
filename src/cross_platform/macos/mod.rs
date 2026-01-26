@@ -6,11 +6,13 @@ pub mod haptics;
 use crate::app::apps::{App, AppCommand};
 use crate::commands::Function;
 use crate::config::Config;
-use crate::utils::handle_from_icns;
-use crate::utils::index_dirs_from_config;
+use crate::utils::index_installed_apps;
+use icns::IconFamily;
+use rayon::iter::ParallelExtend;
 use {
     iced::wgpu::rwh::RawWindowHandle,
     iced::wgpu::rwh::WindowHandle,
+    iced::widget::image::Handle,
     objc2::MainThreadMarker,
     objc2::rc::Retained,
     objc2_app_kit::NSView,
@@ -222,7 +224,7 @@ fn get_installed_apps(dir: impl AsRef<Path>, store_icons: bool) -> Vec<App> {
         .collect()
 }
 
-pub fn get_installed_macos_apps(config: &Config) -> Vec<App> {
+pub fn get_installed_macos_apps(config: &Config) -> anyhow::Result<Vec<App>> {
     let store_icons = config.theme.show_icons;
     let user_local_path = std::env::var("HOME").unwrap() + "/Applications/";
     let paths: Vec<String> = vec![
@@ -232,14 +234,15 @@ pub fn get_installed_macos_apps(config: &Config) -> Vec<App> {
         "/System/Applications/Utilities/".to_string(),
     ];
 
-    let mut apps = paths
-        .par_iter()
-        .map(|path| get_installed_apps(path, store_icons))
-        .flatten()
-        .collect();
-    index_dirs_from_config(&mut apps);
+    let mut apps = index_installed_apps(config)?;
+    apps.par_extend(
+        paths
+            .par_iter()
+            .map(|path| get_installed_apps(path, store_icons))
+            .flatten(),
+    );
 
-    apps
+    Ok(apps)
 }
 
 /// Open the settings file with the system default editor
@@ -269,9 +272,9 @@ pub(crate) fn handle_from_icns(path: &Path) -> Option<Handle> {
         icon.height() as u32,
         icon.data().to_vec(),
     )?;
-    return Some(Handle::from_rgba(
+    Some(Handle::from_rgba(
         image.width(),
         image.height(),
         image.into_raw(),
-    ));
+    ))
 }

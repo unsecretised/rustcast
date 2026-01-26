@@ -3,16 +3,15 @@ use std::{
     io,
     path::{Path, PathBuf},
     thread,
+    time::Instant,
 };
 
-#[cfg(target_os = "macos")]
-use icns::IconFamily;
 use rayon::prelude::*;
 
 #[cfg(target_os = "macos")]
 use {
-    crate::cross_platform::macos::get_installed_macos_apps, objc2_app_kit::NSWorkspace,
-    objc2_foundation::NSURL, std::os::unix::fs::PermissionsExt,
+    objc2_app_kit::NSWorkspace,
+    objc2_foundation::NSURL,
 };
 
 #[cfg(target_os = "windows")]
@@ -147,27 +146,26 @@ pub fn index_installed_apps(config: &Config) -> anyhow::Result<Vec<App>> {
 
     #[cfg(target_os = "windows")]
     {
-        use std::time::Instant;
-
         use crate::cross_platform::windows::app_finding::get_apps_from_registry;
-        use crate::cross_platform::windows::app_finding::get_known_paths;
+        use crate::cross_platform::windows::app_finding::index_start_menu;
 
         let start = Instant::now();
 
-        let mut reg_apps = Vec::new();
-        get_apps_from_registry(&mut reg_apps);
+        let mut other_apps = index_start_menu();
+        get_apps_from_registry(&mut other_apps);
 
-        let res = config.index_dirs
+        let res = config
+            .index_dirs
             .par_iter()
             .flat_map(|x| {
                 search_dir(
                     &x.path,
                     &config.index_exclude_patterns,
                     &config.index_include_patterns,
-                    x.max_depth
+                    x.max_depth,
                 )
             })
-            .chain(reg_apps.into_par_iter())
+            .chain(other_apps.into_par_iter())
             .collect();
 
         let end = Instant::now();
@@ -186,13 +184,12 @@ pub fn index_installed_apps(config: &Config) -> anyhow::Result<Vec<App>> {
         let res = config
             .index_dirs
             .par_iter()
-            .chain(get_known_paths().par_iter())
             .flat_map(|x| {
                 search_dir(
-                    x,
+                    &x.path,
                     &config.index_exclude_patterns,
-                    &config.index_exclude_patterns,
-                    3,
+                    &config.index_include_patterns,
+                    x.max_depth,
                 )
             })
             .collect();

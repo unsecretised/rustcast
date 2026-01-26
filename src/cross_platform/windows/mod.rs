@@ -1,4 +1,5 @@
-use windows::Win32::UI::WindowsAndMessaging::GetCursorPos;
+use lnk::{Encoding, encoding::WINDOWS_1252};
+use windows::Win32::{Globalization::GetACP, UI::WindowsAndMessaging::GetCursorPos};
 
 pub mod app_finding;
 
@@ -28,4 +29,14 @@ pub fn open_on_focused_monitor() -> iced::Point {
     let y = monitor_info.rcMonitor.top as f32 + (monitor_height as f32 - window_height) / 2.0;
 
     iced::Point { x, y }
+}
+
+/// Wrapper over GetACP that defaults to WINDOWS_1252 if the ACP isn't found
+pub fn get_acp() -> Encoding {
+    unsafe { codepage::to_encoding(GetACP() as u16) }.unwrap_or_else(|| {
+        tracing::warn!(
+            "ACP not found, falling back to WINDOWS_1252 as the default shortcut encoding"
+        );
+        WINDOWS_1252
+    })
 }

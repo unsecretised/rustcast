@@ -12,11 +12,9 @@ use crate::{
     cross_platform::get_img_handle,
 };
 
-#[cfg(target_os = "macos")]
-use crate::utils::handle_from_icns;
 
-mod patterns;
 mod include_patterns;
+mod patterns;
 
 /// The main config struct (effectively the config file's "schema")
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -63,7 +61,7 @@ impl Default for Config {
             haptic_feedback: false,
             show_trayicon: true,
             shells: vec![],
-            index_dirs: index_dirs,
+            index_dirs,
             index_exclude_patterns: vec![],
             index_include_patterns: vec![],
         }

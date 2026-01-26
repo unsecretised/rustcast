@@ -234,6 +234,15 @@ impl Tile {
     //     }
     // }
 
+    /// Gets the frontmost application to focus later.
+    #[cfg(target_os = "macos")]
+    pub fn capture_frontmost(&mut self) {
+        use objc2_app_kit::NSWorkspace;
+
+        let ws = NSWorkspace::sharedWorkspace();
+        self.frontmost = ws.frontmostApplication();
+    }
+
     /// Restores the frontmost application.
     #[allow(deprecated)]
     pub fn restore_frontmost(&mut self) {
