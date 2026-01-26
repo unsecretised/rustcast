@@ -24,7 +24,7 @@ use iced::{event, window};
 
 use objc2::rc::Retained;
 use objc2_app_kit::NSRunningApplication;
-use rayon::iter::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use tray_icon::TrayIcon;
 
 use std::fs;
@@ -249,7 +249,7 @@ fn handle_hot_reloading() -> impl futures::Stream<Item = Message> {
         )
         .unwrap_or("".to_string());
 
-        let paths: Vec<String> = default_app_paths().into_par_iter().collect();
+        let paths = default_app_paths();
         let mut total_files: usize = paths
             .par_iter()
             .map(|dir| count_dirs_in_dir(Path::new(dir)))

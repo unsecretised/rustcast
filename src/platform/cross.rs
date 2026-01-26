@@ -4,7 +4,7 @@ use std::{
     process::exit,
 };
 
-use rayon::iter::{IntoParallelIterator, ParallelIterator as _};
+use rayon::iter::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator as _};
 
 use crate::{
     app::apps::{App, AppCommand},
@@ -12,7 +12,9 @@ use crate::{
     utils::{handle_from_icns, log_error, log_error_and_exit},
 };
 
-pub fn default_app_paths() -> impl IntoParallelIterator<Item = String> {
+pub fn default_app_paths()
+-> impl IntoParallelIterator<Item = String> + for<'a> IntoParallelRefIterator<'a, Item = &'a String>
+{
     let user_local_path = std::env::var("HOME").unwrap() + "/Applications/";
 
     [
