@@ -3,8 +3,7 @@ mod calculator;
 mod clipboard;
 mod commands;
 mod config;
-mod haptics;
-mod macos;
+mod platform;
 mod styles;
 mod unit_conversion;
 mod utils;
@@ -18,11 +17,10 @@ use crate::{
 
 use global_hotkey::GlobalHotKeyManager;
 
+use self::platform::set_activation_policy_accessory;
+
 fn main() -> iced::Result {
-    #[cfg(target_os = "macos")]
-    {
-        macos::set_activation_policy_accessory();
-    }
+    set_activation_policy_accessory();
 
     let home = std::env::var("HOME").unwrap();
 

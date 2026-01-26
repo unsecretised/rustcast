@@ -5,17 +5,12 @@
 #![allow(non_camel_case_types)]
 
 use objc2_core_foundation::{CFNumber, CFNumberType, CFRetained, CFString, CFType};
-use once_cell::sync::OnceCell;
-use std::ffi::{c_char, c_void};
+use std::{
+    ffi::{c_char, c_void},
+    sync::LazyLock,
+};
 
-/// The kinds of haptic patterns that can be performed
-#[allow(dead_code)]
-#[derive(Copy, Clone, Debug)]
-pub enum HapticPattern {
-    Generic,
-    Alignment,
-    LevelChange,
-}
+use crate::platform::HapticPattern;
 
 unsafe extern "C" {
     unsafe fn CFRelease(cf: *mut CFType);
@@ -143,28 +138,30 @@ impl MtsState {
     }
 }
 
-static MTS: OnceCell<Option<MtsState>> = OnceCell::new();
+static MTS: LazyLock<Option<MtsState>> = LazyLock::new(MtsState::open_default_or_all);
 
 fn mts_state() -> Option<&'static MtsState> {
-    MTS.get_or_init(MtsState::open_default_or_all).as_ref()
+    MTS.as_ref()
 }
 
 /// Perform a haptic feedback - Just use this function to perform haptic feedback... please don't
 /// remake this function unless you're a genius or absolutely have to
-pub fn perform_haptic(pattern: HapticPattern) -> bool {
-    if let Some(state) = mts_state() {
-        let pat = pattern_index(pattern);
-        let mut any_ok = false;
-        unsafe {
-            for &act in &state.actuators {
-                if !act.is_null() && MTActuatorIsOpen(act) {
-                    let kr = MTActuatorActuate(act, pat, 0, 0.0, 0.0);
-                    any_ok |= kr == 0;
-                }
+pub(crate) fn perform_haptic(pattern: HapticPattern) -> bool {
+    let Some(state) = mts_state() else {
+        return false;
+    };
+
+    let pat = pattern_index(pattern);
+    let mut any_ok = false;
+
+    unsafe {
+        for &act in &state.actuators {
+            if !act.is_null() && MTActuatorIsOpen(act) {
+                let kr = MTActuatorActuate(act, pat, 0, 0.0, 0.0);
+                any_ok |= kr == 0;
             }
         }
-        any_ok
-    } else {
-        false
     }
+
+    any_ok
 }

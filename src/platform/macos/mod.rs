@@ -1,11 +1,15 @@
 //! Macos specific logic, such as window settings, etc.
-#[cfg(target_os = "macos")]
+mod discovery;
+mod haptics;
+
 use iced::wgpu::rwh::WindowHandle;
+
+pub(super) use self::discovery::get_installed_apps;
+pub(super) use self::haptics::perform_haptic;
 
 /// This sets the activation policy of the app to Accessory, allowing rustcast to be visible ontop
 /// of fullscreen apps
-#[cfg(target_os = "macos")]
-pub fn set_activation_policy_accessory() {
+pub(super) fn set_activation_policy_accessory() {
     use objc2::MainThreadMarker;
     use objc2_app_kit::{NSApp, NSApplicationActivationPolicy};
 
@@ -15,8 +19,7 @@ pub fn set_activation_policy_accessory() {
 }
 
 /// This carries out the window configuration for the macos window (only things that are macos specific)
-#[cfg(target_os = "macos")]
-pub fn macos_window_config(handle: &WindowHandle) {
+pub(super) fn macos_window_config(handle: &WindowHandle) {
     use iced::wgpu::rwh::RawWindowHandle;
     use objc2::rc::Retained;
     use objc2_app_kit::NSView;
@@ -44,8 +47,7 @@ pub fn macos_window_config(handle: &WindowHandle) {
 
 /// This is the function that forces focus onto rustcast
 #[allow(deprecated)]
-#[cfg(target_os = "macos")]
-pub fn focus_this_app() {
+pub(super) fn focus_this_app() {
     use objc2::MainThreadMarker;
     use objc2_app_kit::NSApp;
 
@@ -69,7 +71,7 @@ struct ProcessSerialNumber {
 /// returns ApplicationServices OSStatus (u32)
 ///
 /// doesn't seem to do anything if you haven't opened a window yet, so wait to call it until after that.
-pub fn transform_process_to_ui_element() -> u32 {
+pub(super) fn transform_process_to_ui_element() -> u32 {
     use objc2_application_services::{
         TransformProcessType, kCurrentProcess, kProcessTransformToUIElementApplication,
     };

@@ -2,12 +2,11 @@
 pub mod elm;
 pub mod update;
 
-use crate::app::apps::App;
-use crate::app::tile::elm::default_app_paths;
 use crate::app::{ArrowKey, Message, Move, Page};
 use crate::clipboard::ClipBoardContentType;
 use crate::config::Config;
 use crate::utils::open_settings;
+use crate::{app::apps::App, platform::default_app_paths};
 
 use arboard::Clipboard;
 use global_hotkey::hotkey::HotKey;
@@ -28,11 +27,10 @@ use objc2_app_kit::NSRunningApplication;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use tray_icon::TrayIcon;
 
-use std::collections::BTreeMap;
 use std::fs;
 use std::ops::Bound;
-use std::path::PathBuf;
 use std::time::Duration;
+use std::{collections::BTreeMap, path::Path};
 
 /// This is a wrapper around the sender to disable dropping
 #[derive(Clone, Debug)]
@@ -254,7 +252,7 @@ fn handle_hot_reloading() -> impl futures::Stream<Item = Message> {
         let paths = default_app_paths();
         let mut total_files: usize = paths
             .par_iter()
-            .map(|dir| count_dirs_in_dir(&dir.to_owned().into()))
+            .map(|dir| count_dirs_in_dir(Path::new(dir)))
             .sum();
 
         loop {
@@ -265,7 +263,7 @@ fn handle_hot_reloading() -> impl futures::Stream<Item = Message> {
 
             let current_total_files: usize = paths
                 .par_iter()
-                .map(|dir| count_dirs_in_dir(&dir.to_owned().into()))
+                .map(|dir| count_dirs_in_dir(Path::new(dir)))
                 .sum();
 
             if current_content != content {
@@ -281,7 +279,7 @@ fn handle_hot_reloading() -> impl futures::Stream<Item = Message> {
     })
 }
 
-fn count_dirs_in_dir(dir: &PathBuf) -> usize {
+fn count_dirs_in_dir(dir: impl AsRef<Path>) -> usize {
     // Read the directory; if it fails, treat as empty
     let entries = match fs::read_dir(dir) {
         Ok(e) => e,

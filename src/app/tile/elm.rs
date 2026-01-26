@@ -10,55 +10,32 @@ use iced::{Alignment, Color, Length, Vector, window};
 use iced::{Element, Task};
 use iced::{Length::Fill, widget::text_input};
 
-use rayon::{
-    iter::{IntoParallelRefIterator, ParallelIterator},
-    slice::ParallelSliceMut,
-};
+use rayon::slice::ParallelSliceMut;
 
-use crate::app::WINDOW_WIDTH;
-use crate::app::pages::clipboard::clipboard_view;
 use crate::app::pages::emoji::emoji_page;
 use crate::app::tile::AppIndex;
 use crate::config::Theme;
 use crate::styles::{contents_style, rustcast_text_input_style, tint, with_alpha};
+use crate::{app::WINDOW_WIDTH, platform};
+use crate::{app::pages::clipboard::clipboard_view, platform::get_installed_apps};
 use crate::{
     app::{Message, Page, apps::App, default_settings, tile::Tile},
     config::Config,
-    macos::{self, transform_process_to_ui_element},
-    utils::get_installed_apps,
+    platform::transform_process_to_ui_element,
 };
-
-pub fn default_app_paths() -> Vec<String> {
-    let user_local_path = std::env::var("HOME").unwrap() + "/Applications/";
-
-    let paths = vec![
-        "/Applications/".to_string(),
-        user_local_path,
-        "/System/Applications/".to_string(),
-        "/System/Applications/Utilities/".to_string(),
-    ];
-
-    paths
-}
 
 /// Initialise the base window
 pub fn new(hotkey: HotKey, config: &Config) -> (Tile, Task<Message>) {
     let (id, open) = window::open(default_settings());
 
     let open = open.discard().chain(window::run(id, |handle| {
-        macos::macos_window_config(&handle.window_handle().expect("Unable to get window handle"));
+        platform::window_config(&handle.window_handle().expect("Unable to get window handle"));
         transform_process_to_ui_element();
     }));
 
     let store_icons = config.theme.show_icons;
 
-    let paths = default_app_paths();
-
-    let mut options: Vec<App> = paths
-        .par_iter()
-        .map(|path| get_installed_apps(path, store_icons))
-        .flatten()
-        .collect();
+    let mut options = get_installed_apps(store_icons);
 
     options.extend(config.shells.iter().map(|x| x.to_app()));
     options.extend(App::basic_apps());

@@ -124,17 +124,6 @@ impl App {
                 name: format!("Current RustCast Version: {app_version}"),
                 name_lc: "version".to_string(),
             },
-            App {
-                open_command: AppCommand::Function(Function::OpenApp(
-                    "/System/Library/CoreServices/Finder.app".to_string(),
-                )),
-                desc: "Application".to_string(),
-                icons: handle_from_icns(Path::new(
-                    "/System/Library/CoreServices/Finder.app/Contents/Resources/Finder.icns",
-                )),
-                name: "Finder".to_string(),
-                name_lc: "finder".to_string(),
-            },
         ]
     }
 

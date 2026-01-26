@@ -11,6 +11,7 @@ global-hotkey = "0.7.0"
 iced = { version = "0.14.0", features = ["image", "tokio"] }
 icns = "0.3.1"
 image = "0.25.9"
+libc = "0.2.180"
 objc2 = "0.6.3"
 objc2-app-kit = { version = "0.3.2", features = ["NSImage"] }
 objc2-application-services = { version = "0.3.2", default-features = false, features = [
