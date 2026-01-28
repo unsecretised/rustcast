@@ -10,6 +10,7 @@ use objc2_app_kit::NSWorkspace;
 #[cfg(target_os = "macos")]
 use objc2_foundation::NSURL;
 
+use crate::cross_platform;
 use crate::utils::open_application;
 use crate::{calculator::Expr, clipboard::ClipBoardContentType, config::Config};
 
@@ -55,43 +56,21 @@ impl Function {
             Function::GoogleSearch(query_string) => {
                 let query_args = query_string.replace(" ", "+");
                 let query = config.search_url.replace("%s", &query_args);
-                let query = query.strip_suffix("?").unwrap_or(&query);
+                let query = query.strip_suffix("?").unwrap_or(&query).to_string();
 
-                #[cfg(target_os = "windows")]
-                {
-                    Command::new("powershell")
-                        .args(["-Command", &format!("Start-Process {}", query)])
-                        .status()
-                        .ok();
-                }
-
-                #[cfg(target_os = "macos")]
-                NSWorkspace::new().openURL(
-                    &NSURL::URLWithString_relativeToURL(
-                        &objc2_foundation::NSString::from_str(query),
-                        None,
-                    )
-                    .unwrap(),
-                );
+                cross_platform::open_url(&query);
             }
 
-            #[cfg(target_os = "macos")]
             Function::OpenWebsite(url) => {
+                use crate::cross_platform;
+
                 let open_url = if url.starts_with("http") {
                     url.to_owned()
                 } else {
                     format!("https://{}", url)
                 };
 
-                thread::spawn(move || {
-                    NSWorkspace::new().openURL(
-                        &NSURL::URLWithString_relativeToURL(
-                            &objc2_foundation::NSString::from_str(&open_url),
-                            None,
-                        )
-                        .unwrap(),
-                    );
-                });
+                cross_platform::open_url(&open_url);
             }
 
             Function::Calculate(expr) => {

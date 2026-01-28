@@ -35,7 +35,7 @@ use crate::config::Config;
 use crate::unit_conversion;
 use crate::utils::get_installed_apps;
 
-use crate::utils::is_valid_url;
+use crate::utils::is_url_like;
 #[cfg(target_os = "macos")]
 use crate::{
     cross_platform::macos::focus_this_app,
@@ -67,7 +67,11 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
         Message::SetSender(sender) => {
             tile.sender = Some(sender.clone());
             if tile.config.show_trayicon {
-                tile.tray_icon = Some(menu_icon(tile.hotkey, sender));
+                tile.tray_icon = Some(menu_icon(
+                    #[cfg(not(target_os = "linux"))]
+                    tile.hotkey,
+                    sender,
+                ));
             }
             Task::none()
         }
@@ -190,11 +194,7 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
                 Err(_) => return Task::none(),
             };
 
-            let mut new_options: Vec<App> = default_app_paths()
-                .par_iter()
-                .map(|path| get_installed_apps(path, new_config.theme.show_icons))
-                .flatten()
-                .collect();
+            let mut new_options: Vec<App> = get_installed_apps(&new_config);
 
             new_options.extend(new_config.shells.iter().map(|x| x.to_app()));
             new_options.extend(App::basic_apps());
@@ -206,40 +206,67 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
             Task::none()
         }
 
-        Message::KeyPressed(hk_id) => {
-            let is_clipboard_hotkey = tile
-                .clipboard_hotkey
-                .map(|hotkey| hotkey.id == hk_id)
-                .unwrap_or(false);
-            let is_open_hotkey = hk_id == tile.hotkey.id;
+        Message::OpenClipboard => {
+            if !tile.visible {
+                return Task::batch([
+                    open_window(),
+                    Task::done(Message::SwitchToPage(Page::ClipboardHistory)),
+                ]);
+            }
 
-            let clipboard_page_task = if is_clipboard_hotkey {
-                Task::done(Message::SwitchToPage(Page::ClipboardHistory))
-            } else if is_open_hotkey {
-                Task::done(Message::SwitchToPage(Page::Main))
+            tile.visible = !tile.visible;
+
+            let clear_search_query = if tile.config.buffer_rules.clear_on_hide {
+                Task::done(Message::ClearSearchQuery)
             } else {
                 Task::none()
             };
 
-            if is_open_hotkey || is_clipboard_hotkey {
-                if !tile.visible {
-                    return Task::batch([open_window(), clipboard_page_task]);
-                }
+            let to_close = window::latest().map(|x| x.unwrap());
+            Task::batch([
+                to_close.map(Message::HideWindow),
+                clear_search_query,
+                Task::done(Message::ReturnFocus),
+            ])
+        }
 
-                tile.visible = !tile.visible;
+        Message::OpenMain => {
+            if !tile.visible {
+                return Task::batch([open_window(), Task::done(Message::SwitchToPage(Page::Main))]);
+            }
 
-                let clear_search_query = if tile.config.buffer_rules.clear_on_hide {
-                    Task::done(Message::ClearSearchQuery)
-                } else {
-                    Task::none()
-                };
+            tile.visible = !tile.visible;
 
-                let to_close = window::latest().map(|x| x.unwrap());
-                Task::batch([
-                    to_close.map(Message::HideWindow),
-                    clear_search_query,
-                    Task::done(Message::ReturnFocus),
-                ])
+            let clear_search_query = if tile.config.buffer_rules.clear_on_hide {
+                Task::done(Message::ClearSearchQuery)
+            } else {
+                Task::none()
+            };
+
+            let to_close = window::latest().map(|x| x.unwrap());
+            Task::batch([
+                to_close.map(Message::HideWindow),
+                clear_search_query,
+                Task::done(Message::ReturnFocus),
+            ])
+        }
+
+        Message::KeyPressed(_) => Task::none(),
+
+        #[cfg(not(target_os = "linux"))]
+        Message::HotkeyPressed(hk_id) => {
+            // Linux Clipboard and Open Hotkey are gonna be handled via a socket
+            let is_clipboard_hotkey = tile
+                .clipboard_hotkey
+                .map(|hotkey| hotkey.id == hk_id)
+                .unwrap_or(false);
+
+            let is_open_hotkey = hk_id == tile.hotkey.id;
+
+            if is_clipboard_hotkey {
+                handle_update(tile, Message::OpenClipboard)
+            } else if is_open_hotkey {
+                handle_update(tile, Message::OpenMain)
             } else {
                 Task::none()
             }
@@ -313,7 +340,13 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
         Message::WindowFocusChanged(wid, focused) => {
             tile.focused = focused;
             if !focused {
-                Task::done(Message::HideWindow(wid)).chain(Task::done(Message::ClearSearchQuery))
+                if cfg!(target_os = "macos") {
+                    Task::done(Message::HideWindow(wid))
+                        .chain(Task::done(Message::ClearSearchQuery))
+                } else {
+                    // linux seems to not wanna unfocus it on start making it not show
+                    Task::none()
+                }
             } else {
                 Task::none()
             }
@@ -430,7 +463,7 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
                         }
                     })
                     .collect();
-            } else if tile.results.is_empty() && is_valid_url(&tile.query) {
+            } else if tile.results.is_empty() && is_url_like(&tile.query) {
                 tile.results.push(App {
                     open_command: AppCommand::Function(Function::OpenWebsite(tile.query.clone())),
                     desc: "Web Browsing".to_string(),
