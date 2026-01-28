@@ -346,8 +346,10 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
             tile.focused = focused;
             if !focused {
                 if cfg!(target_os = "macos") {
-                    Task::done(Message::HideWindow(wid)).chain(Task::done(Message::ClearSearchQuery))
-                } else { // linux seems to not wanna unfocus it on start making it not show
+                    Task::done(Message::HideWindow(wid))
+                        .chain(Task::done(Message::ClearSearchQuery))
+                } else {
+                    // linux seems to not wanna unfocus it on start making it not show
                     Task::none()
                 }
             } else {

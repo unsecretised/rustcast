@@ -19,10 +19,7 @@ use crate::{
 const DISCORD_LINK: &str = "https://discord.gg/bDfNYPbnC5";
 
 /// This create a new menubar icon for the app
-pub fn menu_icon(
-    #[cfg(not(target_os = "linux"))] hotkey: HotKey,
-    sender: ExtSender,
-) -> TrayIcon {
+pub fn menu_icon(#[cfg(not(target_os = "linux"))] hotkey: HotKey, sender: ExtSender) -> TrayIcon {
     let builder = TrayIconBuilder::new();
 
     let image = get_image();

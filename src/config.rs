@@ -184,7 +184,7 @@ impl Shelly {
             if x.ends_with(".icns") {
                 return handle_from_icns(Path::new(&x));
             }
-            
+
             Some(Handle::from_path(Path::new(&x)))
         });
         App {
