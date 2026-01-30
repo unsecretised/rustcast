@@ -13,8 +13,8 @@ use crate::{
     app::{Message, Page, RUSTCAST_DESC_NAME},
     clipboard::ClipBoardContentType,
     commands::Function,
+    cross_platform::get_img_handle,
     styles::{result_button_style, result_row_container_style},
-    utils::handle_from_icns,
 };
 
 /// This tells each "App" what to do when it is clicked, whether it is a function, a message, or a display
@@ -73,7 +73,7 @@ impl App {
             App {
                 open_command: AppCommand::Function(Function::Quit),
                 desc: RUSTCAST_DESC_NAME.to_string(),
-                icons: handle_from_icns(Path::new(
+                icons: get_img_handle(Path::new(
                     "/Applications/Rustcast.app/Contents/Resources/icon.icns",
                 )),
                 name: "Quit RustCast".to_string(),
@@ -82,7 +82,7 @@ impl App {
             App {
                 open_command: AppCommand::Function(Function::OpenPrefPane),
                 desc: RUSTCAST_DESC_NAME.to_string(),
-                icons: handle_from_icns(Path::new(
+                icons: get_img_handle(Path::new(
                     "/Applications/Rustcast.app/Contents/Resources/icon.icns",
                 )),
                 name: "Open RustCast Preferences".to_string(),
@@ -91,7 +91,7 @@ impl App {
             App {
                 open_command: AppCommand::Message(Message::SwitchToPage(Page::EmojiSearch)),
                 desc: RUSTCAST_DESC_NAME.to_string(),
-                icons: handle_from_icns(Path::new(
+                icons: get_img_handle(Path::new(
                     "/Applications/Rustcast.app/Contents/Resources/icon.icns",
                 )),
                 name: "Search for an Emoji".to_string(),
@@ -100,7 +100,7 @@ impl App {
             App {
                 open_command: AppCommand::Message(Message::SwitchToPage(Page::ClipboardHistory)),
                 desc: RUSTCAST_DESC_NAME.to_string(),
-                icons: handle_from_icns(Path::new(
+                icons: get_img_handle(Path::new(
                     "/Applications/Rustcast.app/Contents/Resources/icon.icns",
                 )),
                 name: "Clipboard History".to_string(),
@@ -109,7 +109,7 @@ impl App {
             App {
                 open_command: AppCommand::Message(Message::ReloadConfig),
                 desc: RUSTCAST_DESC_NAME.to_string(),
-                icons: handle_from_icns(Path::new(
+                icons: get_img_handle(Path::new(
                     "/Applications/Rustcast.app/Contents/Resources/icon.icns",
                 )),
                 name: "Reload RustCast".to_string(),
@@ -118,7 +118,7 @@ impl App {
             App {
                 open_command: AppCommand::Display,
                 desc: RUSTCAST_DESC_NAME.to_string(),
-                icons: handle_from_icns(Path::new(
+                icons: get_img_handle(Path::new(
                     "/Applications/Rustcast.app/Contents/Resources/icon.icns",
                 )),
                 name: format!("Current RustCast Version: {app_version}"),
@@ -129,7 +129,7 @@ impl App {
                     "/System/Library/CoreServices/Finder.app".to_string(),
                 )),
                 desc: "Application".to_string(),
-                icons: handle_from_icns(Path::new(
+                icons: get_img_handle(Path::new(
                     "/System/Library/CoreServices/Finder.app/Contents/Resources/Finder.icns",
                 )),
                 name: "Finder".to_string(),

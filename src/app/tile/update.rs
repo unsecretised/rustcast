@@ -25,17 +25,13 @@ use crate::app::menubar::menu_icon;
 use crate::app::tile::AppIndex;
 use crate::app::{Message, Page, tile::Tile};
 
-#[cfg(target_os = "windows")]
-use crate::utils::get_config_installation_dir;
-
 use crate::calculator::Expr;
 use crate::clipboard::ClipBoardContentType;
 use crate::commands::Function;
 use crate::config::Config;
 use crate::unit_conversion;
-use crate::utils::get_installed_apps;
+use crate::utils::index_installed_apps;
 
-use crate::utils::is_valid_url;
 #[cfg(target_os = "macos")]
 use crate::{
     cross_platform::macos::focus_this_app,
@@ -43,7 +39,8 @@ use crate::{
 };
 
 pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
-    tracing::debug!("Handling update (message: {:?})", message);
+    tracing::trace!("Handling update (message: {:?})", message);
+
     match message {
         Message::OpenWindow => {
             #[cfg(target_os = "macos")]
@@ -189,20 +186,20 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
                 Ok(a) => a,
                 Err(_) => return Task::none(),
             };
+            let mut options = Vec::new();
 
-            let mut new_options: Vec<App> = default_app_paths()
-                .par_iter()
-                .map(|path| get_installed_apps(path, new_config.theme.show_icons))
-                .flatten()
-                .collect();
+            match index_installed_apps(&new_config) {
+                Ok(x)  => options.extend(x),
+                Err(e) => tracing::error!("Error indexing apps: {e}")
+            }
 
-            new_options.extend(new_config.shells.iter().map(|x| x.to_app()));
-            new_options.extend(App::basic_apps());
-            new_options.par_sort_by_key(|x| x.name.len());
+            options.extend(new_config.shells.iter().map(|x| x.to_app()));
+            options.extend(App::basic_apps());
+            options.par_sort_by_key(|x| x.name.len());
 
             tile.theme = new_config.theme.to_owned().into();
             tile.config = new_config;
-            tile.options = AppIndex::from_apps(new_options);
+            tile.options = AppIndex::from_apps(options);
             Task::none()
         }
 
@@ -310,6 +307,7 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
             tile.results = vec![];
             Task::none()
         }
+
         Message::WindowFocusChanged(wid, focused) => {
             tile.focused = focused;
             if !focused {
@@ -332,7 +330,7 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
             }
 
             tile.query_lc = input.trim().to_lowercase();
-            tile.query = input;
+            tile.query = input.clone();
             let prev_size = tile.results.len();
             if tile.query_lc.is_empty() && tile.page != Page::ClipboardHistory {
                 tile.results = vec![];
@@ -430,7 +428,7 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
                         }
                     })
                     .collect();
-            } else if tile.results.is_empty() && is_valid_url(&tile.query) {
+            } else if tile.results.is_empty() && url::Url::parse(&input).is_ok() {
                 tile.results.push(App {
                     open_command: AppCommand::Function(Function::OpenWebsite(tile.query.clone())),
                     desc: "Web Browsing".to_string(),

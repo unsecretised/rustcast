@@ -75,7 +75,6 @@ impl Function {
                 );
             }
 
-            #[cfg(target_os = "macos")]
             Function::OpenWebsite(url) => {
                 let open_url = if url.starts_with("http") {
                     url.to_owned()
@@ -83,15 +82,8 @@ impl Function {
                     format!("https://{}", url)
                 };
 
-                thread::spawn(move || {
-                    NSWorkspace::new().openURL(
-                        &NSURL::URLWithString_relativeToURL(
-                            &objc2_foundation::NSString::from_str(&open_url),
-                            None,
-                        )
-                        .unwrap(),
-                    );
-                });
+                // Should never get here without it being validated first
+                open::that(open_url).unwrap();
             }
 
             Function::Calculate(expr) => {
@@ -110,8 +102,8 @@ impl Function {
                 }
             },
 
+            #[cfg(target_os = "macos")]
             Function::OpenPrefPane => {
-                #[cfg(target_os = "macos")]
                 thread::spawn(move || {
                     NSWorkspace::new().openURL(&NSURL::fileURLWithPath(
                         &objc2_foundation::NSString::from_str(
@@ -123,6 +115,10 @@ impl Function {
             }
 
             Function::Quit => std::process::exit(0),
+            f => {
+                // TODO: something in the UI to show this
+                tracing::error!("The function {:?} is unimplemented for this platform", f);
+            }
         }
     }
 }

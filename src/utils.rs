@@ -1,50 +1,23 @@
 //! This has all the utility functions that rustcast uses
 use std::{
-    fs::{self},
+    io,
     path::{Path, PathBuf},
     thread,
+    time::Instant,
 };
 
-use iced::widget::image::Handle;
-#[cfg(target_os = "macos")]
-use icns::IconFamily;
+use rayon::prelude::*;
 
 #[cfg(target_os = "macos")]
 use {
-    crate::cross_platform::macos::get_installed_macos_apps, objc2_app_kit::NSWorkspace,
-    objc2_foundation::NSURL, std::os::unix::fs::PermissionsExt,
+    objc2_app_kit::NSWorkspace,
+    objc2_foundation::NSURL,
 };
 
 #[cfg(target_os = "windows")]
-use {crate::cross_platform::windows::get_installed_windows_apps, std::process::Command};
+use std::process::Command;
 
-use crate::{
-    app::apps::{App, AppCommand},
-    commands::Function,
-};
-
-/// This converts an icns file to an iced image handle
-#[cfg(target_os = "macos")]
-pub(crate) fn handle_from_icns(path: &Path) -> Option<Handle> {
-    use image::RgbaImage;
-
-    let data = std::fs::read(path).ok()?;
-    let family = IconFamily::read(std::io::Cursor::new(&data)).ok()?;
-
-    let icon_type = family.available_icons();
-
-    let icon = family.get_icon_with_type(*icon_type.first()?).ok()?;
-    let image = RgbaImage::from_raw(
-        icon.width() as u32,
-        icon.height() as u32,
-        icon.data().to_vec(),
-    )?;
-    return Some(Handle::from_rgba(
-        image.width(),
-        image.height(),
-        image.into_raw(),
-    ));
-}
+use crate::app::apps::App;
 
 pub fn get_config_installation_dir() -> PathBuf {
     if cfg!(target_os = "windows") {
@@ -63,39 +36,72 @@ pub fn get_config_file_path() -> PathBuf {
         home.join(".config/rustcast/config.toml")
     }
 }
-use crate::config::Config;
 
-pub fn read_config_file(file_path: &Path) -> Result<Config, std::io::Error> {
-    let config: Config = match std::fs::read_to_string(file_path) {
-        Ok(a) => toml::from_str(&a).unwrap(),
-        Err(_) => Config::default(),
-    };
+/// Recursively loads apps from a set of folders.
+///
+/// [`exclude_patterns`] is a set of glob patterns to include, while [`include_patterns`] is a set of
+/// patterns to include ignoring [`exclude_patterns`].
+fn search_dir(
+    path: impl AsRef<Path>,
+    exclude_patterns: &[glob::Pattern],
+    include_patterns: &[glob::Pattern],
+    max_depth: usize,
+) -> impl ParallelIterator<Item = App> {
+    use crate::{app::apps::AppCommand, commands::Function};
+    use walkdir::WalkDir;
 
-    Ok(config)
+    WalkDir::new(path.as_ref())
+        .follow_links(false)
+        .max_depth(max_depth)
+        .into_iter()
+        .par_bridge()
+        .filter_map(|e| e.ok())
+        .filter(|e| e.path().extension().is_some_and(|ext| ext == "exe"))
+        .filter_map(|entry| {
+            let path = entry.path();
+
+            if exclude_patterns.iter().any(|x| x.matches_path(path))
+                && !include_patterns.iter().any(|x| x.matches_path(path))
+            {
+                #[cfg(debug_assertions)]
+                tracing::trace!("Executable skipped [kfolder]: {:?}", path.to_str());
+
+                return None;
+            }
+
+            let file_name = path.file_name().unwrap().to_string_lossy();
+            let name = file_name.replace(".exe", "");
+
+            #[cfg(debug_assertions)]
+            tracing::trace!("Executable loaded  [kfolder]: {:?}", path.to_str());
+
+            Some(App {
+                open_command: AppCommand::Function(Function::OpenApp(
+                    path.to_string_lossy().to_string(),
+                )),
+                name: name.clone(),
+                name_lc: name.to_lowercase(),
+                icons: None,
+                desc: "Application".to_string(),
+            })
+        })
 }
 
-pub fn create_config_file_if_not_exists(
-    file_path: &Path,
-    config: &Config,
-) -> Result<(), std::io::Error> {
-    // check if file exists
-    if let Ok(exists) = std::fs::metadata(file_path)
-        && exists.is_file()
-    {
-        return Ok(());
+use crate::config::Config;
+
+pub fn read_config_file(file_path: &Path) -> anyhow::Result<Config> {
+    match std::fs::read_to_string(file_path) {
+        Ok(a) => Ok(toml::from_str(&a)?),
+        Err(e) if e.kind() == io::ErrorKind::NotFound => {
+            let cfg = Config::default();
+            std::fs::write(
+                file_path,
+                toml::to_string(&cfg).unwrap_or_else(|x| x.to_string()),
+            )?;
+            Ok(cfg)
+        }
+        Err(e) => Err(e.into()),
     }
-
-    if let Some(parent) = file_path.parent() {
-        std::fs::create_dir_all(parent).unwrap();
-    }
-
-    std::fs::write(
-        file_path,
-        toml::to_string(&config).unwrap_or_else(|x| x.to_string()),
-    )
-    .unwrap();
-
-    Ok(())
 }
 
 pub fn open_application(path: &str) {
@@ -126,90 +132,74 @@ pub fn open_application(path: &str) {
     });
 }
 
-#[allow(unused)]
-pub fn index_dirs_from_config(apps: &mut Vec<App>) -> bool {
-    let path = get_config_file_path();
-    let config = read_config_file(path.as_path());
+pub fn index_installed_apps(config: &Config) -> anyhow::Result<Vec<App>> {
+    tracing::debug!("Indexing installed apps");
+    tracing::debug!("Exclude patterns: {:?}", &config.index_exclude_patterns);
+    tracing::debug!("Include patterns: {:?}", &config.index_include_patterns);
 
-    // if config is not valid return false otherwise unwrap config so it is usable
-    let config = match config {
-        Ok(config) => config,
-        Err(err) => {
-            println!("Error reading config file: {}", err);
-            return false;
-        }
-    };
+    let path = get_config_file_path();
+    let config = read_config_file(path.as_path())?;
 
     if config.index_dirs.is_empty() {
-        return false;
-    }
-
-    config.index_dirs.clone().iter().for_each(|dir| {
-        // check if dir exists
-        if !Path::new(dir).exists() {
-            println!("Directory {} does not exist", dir);
-            return;
-        }
-
-        let paths = fs::read_dir(dir).unwrap();
-
-        for path in paths {
-            let path = path.unwrap().path();
-            let metadata = fs::metadata(&path).unwrap();
-
-            #[cfg(target_os = "windows")]
-            let is_executable =
-                metadata.is_file() && path.extension().and_then(|s| s.to_str()) == Some("exe");
-
-            #[cfg(target_os = "macos")]
-            let is_executable = {
-                (metadata.is_file() && (metadata.permissions().mode() & 0o111 != 0))
-                    || path.extension().and_then(|s| s.to_str()) == Some("app")
-            };
-
-            if is_executable {
-                let display_name = path.file_name().unwrap().to_string_lossy().to_string();
-                apps.push(App {
-                    open_command: AppCommand::Function(Function::OpenApp(
-                        path.to_string_lossy().to_string(),
-                    )),
-                    name: display_name.clone(),
-                    desc: "Application".to_string(),
-                    name_lc: display_name.clone().to_lowercase(),
-                    icons: None,
-                });
-            }
-        }
-    });
-
-    true
-}
-
-/// Use this to get installed apps
-pub fn get_installed_apps(config: &Config) -> Vec<App> {
-    tracing::debug!("Indexing installed apps");
-
-    #[cfg(target_os = "macos")]
-    {
-        get_installed_macos_apps(config)
+        tracing::debug!("No extra index dirs provided")
     }
 
     #[cfg(target_os = "windows")]
     {
-        get_installed_windows_apps()
-    }
-}
+        use crate::cross_platform::windows::app_finding::get_apps_from_registry;
+        use crate::cross_platform::windows::app_finding::index_start_menu;
 
-/// Check if the provided string is a valid url
-pub fn is_valid_url(s: &str) -> bool {
-    s.ends_with(".com")
-        || s.ends_with(".net")
-        || s.ends_with(".org")
-        || s.ends_with(".edu")
-        || s.ends_with(".gov")
-        || s.ends_with(".io")
-        || s.ends_with(".co")
-        || s.ends_with(".me")
-        || s.ends_with(".app")
-        || s.ends_with(".dev")
+        let start = Instant::now();
+
+        let mut other_apps = index_start_menu();
+        get_apps_from_registry(&mut other_apps);
+
+        let res = config
+            .index_dirs
+            .par_iter()
+            .flat_map(|x| {
+                search_dir(
+                    &x.path,
+                    &config.index_exclude_patterns,
+                    &config.index_include_patterns,
+                    x.max_depth,
+                )
+            })
+            .chain(other_apps.into_par_iter())
+            .collect();
+
+        let end = Instant::now();
+        tracing::info!(
+            "Finished indexing apps (t = {}s)",
+            (end - start).as_secs_f32()
+        );
+
+        Ok(res)
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        let start = Instant::now();
+
+        let res = config
+            .index_dirs
+            .par_iter()
+            .flat_map(|x| {
+                search_dir(
+                    &x.path,
+                    &config.index_exclude_patterns,
+                    &config.index_include_patterns,
+                    x.max_depth,
+                )
+            })
+            .collect();
+
+        let end = Instant::now();
+        tracing::info!(
+            "Finished indexing apps (t = {}s)",
+            (end - start).as_secs_f32()
+        );
+
+        Ok(res)
+    }
 }

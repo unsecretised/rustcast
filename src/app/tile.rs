@@ -235,19 +235,30 @@ impl Tile {
     }
 
     // Unused, keeping it for now
+    // pub fn capture_frontmost(&mut self) {
+    //     #[cfg(target_os = "macos")]
+    //     {
+    //         use objc2_app_kit::NSWorkspace;
+
+    //         let ws = NSWorkspace::sharedWorkspace();
+    //         self.frontmost = ws.frontmostApplication();
+    //     };
+
+    //     #[cfg(target_os = "windows")]
+    //     {
+    //         use windows::Win32::UI::WindowsAndMessaging::GetForegroundWindow;
+
+    //         self.frontmost = Some(unsafe { GetForegroundWindow() });
+    //     }
+    // }
+
+    /// Gets the frontmost application to focus later.
+    #[cfg(target_os = "macos")]
     pub fn capture_frontmost(&mut self) {
-        #[cfg(target_os = "macos")]
-        {
-            use objc2_app_kit::NSWorkspace;
+        use objc2_app_kit::NSWorkspace;
 
-            let ws = NSWorkspace::sharedWorkspace();
-            self.frontmost = ws.frontmostApplication();
-        };
-
-        #[cfg(target_os = "windows")]
-        {
-            self.frontmost = Some(unsafe { GetForegroundWindow() });
-        }
+        let ws = NSWorkspace::sharedWorkspace();
+        self.frontmost = ws.frontmostApplication();
     }
 
     /// Restores the frontmost application.

@@ -6,11 +6,13 @@ pub mod haptics;
 use crate::app::apps::{App, AppCommand};
 use crate::commands::Function;
 use crate::config::Config;
-use crate::utils::handle_from_icns;
-use crate::utils::index_dirs_from_config;
+use crate::utils::index_installed_apps;
+use icns::IconFamily;
+use rayon::iter::ParallelExtend;
 use {
     iced::wgpu::rwh::RawWindowHandle,
     iced::wgpu::rwh::WindowHandle,
+    iced::widget::image::Handle,
     objc2::MainThreadMarker,
     objc2::rc::Retained,
     objc2_app_kit::NSView,
@@ -222,7 +224,7 @@ fn get_installed_apps(dir: impl AsRef<Path>, store_icons: bool) -> Vec<App> {
         .collect()
 }
 
-pub fn get_installed_macos_apps(config: &Config) -> Vec<App> {
+pub fn get_installed_macos_apps(config: &Config) -> anyhow::Result<Vec<App>> {
     let store_icons = config.theme.show_icons;
     let user_local_path = std::env::var("HOME").unwrap() + "/Applications/";
     let paths: Vec<String> = vec![
@@ -232,25 +234,15 @@ pub fn get_installed_macos_apps(config: &Config) -> Vec<App> {
         "/System/Applications/Utilities/".to_string(),
     ];
 
-    let mut apps = paths
-        .par_iter()
-        .map(|path| get_installed_apps(path, store_icons))
-        .flatten()
-        .collect();
-    index_dirs_from_config(&mut apps);
+    let mut apps = index_installed_apps(config)?;
+    apps.par_extend(
+        paths
+            .par_iter()
+            .map(|path| get_installed_apps(path, store_icons))
+            .flatten(),
+    );
 
-    apps
-}
-
-/// Opens a provided URL
-pub fn open_url(url: &str) {
-    let url = url.to_owned();
-    thread::spawn(move || {
-        NSWorkspace::new().openURL(
-            &NSURL::URLWithString_relativeToURL(&objc2_foundation::NSString::from_str(&url), None)
-                .unwrap(),
-        );
-    });
+    Ok(apps)
 }
 
 /// Open the settings file with the system default editor
@@ -263,4 +255,26 @@ pub fn open_settings() {
             ),
         ));
     });
+}
+
+/// Gets an iced image handle from a .icns file.
+pub(crate) fn handle_from_icns(path: &Path) -> Option<Handle> {
+    use image::RgbaImage;
+
+    let data = std::fs::read(path).ok()?;
+    let family = IconFamily::read(std::io::Cursor::new(&data)).ok()?;
+
+    let icon_type = family.available_icons();
+
+    let icon = family.get_icon_with_type(*icon_type.first()?).ok()?;
+    let image = RgbaImage::from_raw(
+        icon.width() as u32,
+        icon.height() as u32,
+        icon.data().to_vec(),
+    )?;
+    Some(Handle::from_rgba(
+        image.width(),
+        image.height(),
+        image.into_raw(),
+    ))
 }

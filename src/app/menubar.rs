@@ -13,14 +13,10 @@ use tray_icon::{
 
 use crate::{
     app::{Message, tile::ExtSender},
-    cross_platform::{open_settings, open_url},
+    cross_platform::open_settings,
 };
 
-const DISCORD_LINK: &str = "https://discord.gg/bDfNYPbnC5";
-
-use tokio::runtime::Runtime;
-
-/// This create a new menubar icon for the app
+/// This creates a new menubar icon for the app
 pub fn menu_icon(hotkey: HotKey, sender: ExtSender) -> TrayIcon {
     let builder = TrayIconBuilder::new();
 
@@ -96,7 +92,9 @@ fn init_event_handler(sender: ExtSender, hotkey_id: u32) {
                     .spawn(async move { sender.clone().try_send(Message::HideTrayIcon).unwrap() });
             }
             "open_issue_page" => {
-                open_url("https://github.com/unsecretised/rustcast/issues/new");
+                if let Err(e) = open::that("https://github.com/unsecretised/rustcast/issues/new") {
+                    tracing::error!("Error opening url: {}", e)
+                }
             }
             "show_rustcast" => {
                 runtime.spawn(async move {
@@ -106,17 +104,20 @@ fn init_event_handler(sender: ExtSender, hotkey_id: u32) {
                         .unwrap();
                 });
             }
-            "open_discord" => {
-                open_url(DISCORD_LINK);
-            }
             "open_help_page" => {
-                open_url("https://github.com/unsecretised/rustcast/discussions/new?category=q-a");
+                if let Err(e) = open::that(
+                    "https://github.com/unsecretised/rustcast/discussions/new?category=q-a",
+                ) {
+                    tracing::error!("Error opening url: {}", e)
+                }
             }
             "open_preferences" => {
                 open_settings();
             }
             "open_github_page" => {
-                open_url("https://github.com/unsecretised/rustcast");
+                if let Err(e) = open::that("https://github.com/unsecretised/rustcast") {
+                    tracing::error!("Error opening url: {}", e)
+                }
             }
             _ => {}
         }

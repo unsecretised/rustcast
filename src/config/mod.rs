@@ -1,14 +1,20 @@
 //! This is the config file type definitions for rustcast
-use std::{path::Path, sync::Arc};
+use std::{path::PathBuf, sync::Arc};
 
-use iced::{Font, font::Family, theme::Custom, widget::image::Handle};
+use iced::{Font, font::Family, theme::Custom};
 use serde::{Deserialize, Serialize};
 
+#[cfg(target_os = "windows")]
+use crate::cross_platform::windows::app_finding::get_known_paths;
 use crate::{
     app::apps::{App, AppCommand},
     commands::Function,
-    utils::handle_from_icns,
+    cross_platform::get_img_handle,
 };
+
+
+mod include_patterns;
+mod patterns;
 
 /// The main config struct (effectively the config file's "schema")
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -18,17 +24,35 @@ pub struct Config {
     pub clipboard_hotkey: Option<String>,
     pub buffer_rules: Buffer,
     pub theme: Theme,
+
     pub placeholder: String,
     pub search_url: String,
     pub haptic_feedback: bool,
     pub show_trayicon: bool,
     pub shells: Vec<Shelly>,
-    pub index_dirs: Vec<String>,
+
+    #[serde(with = "include_patterns")]
+    pub index_dirs: Vec<include_patterns::Pattern>,
+
+    #[serde(with = "patterns")]
+    pub index_exclude_patterns: Vec<glob::Pattern>,
+
+    #[serde(with = "patterns")]
+    pub index_include_patterns: Vec<glob::Pattern>,
 }
 
 impl Default for Config {
     /// The default config
     fn default() -> Self {
+        #[cfg(target_os = "windows")]
+        let index_dirs = get_known_paths()
+            .into_iter()
+            .map(|path| include_patterns::Pattern { path, max_depth: 3 })
+            .collect();
+
+        #[cfg(not(target_os = "windows"))]
+        let index_dirs = Vec::new();
+
         Self {
             toggle_hotkey: "ALT+SPACE".to_string(),
             clipboard_hotkey: None,
@@ -39,7 +63,9 @@ impl Default for Config {
             haptic_feedback: false,
             show_trayicon: true,
             shells: vec![],
-            index_dirs: vec![],
+            index_dirs,
+            index_exclude_patterns: vec![],
+            index_include_patterns: vec![],
         }
     }
 }
@@ -179,11 +205,7 @@ impl Shelly {
         let self_clone = self.clone();
         let icon = self_clone.icon_path.and_then(|x| {
             let x = x.replace("~", &std::env::var("HOME").unwrap());
-            if x.ends_with(".icns") {
-                handle_from_icns(Path::new(&x))
-            } else {
-                Some(Handle::from_path(Path::new(&x)))
-            }
+            get_img_handle(&PathBuf::from(x))
         });
         App {
             open_command: AppCommand::Function(Function::RunShellCommand(

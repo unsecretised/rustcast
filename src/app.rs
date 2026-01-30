@@ -1,4 +1,5 @@
 //! Main logic for the app
+
 use crate::commands::Function;
 use iced::window::{self, Id, Settings};
 
