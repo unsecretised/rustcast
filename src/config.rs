@@ -4,10 +4,11 @@ use std::{path::Path, sync::Arc};
 use iced::{Font, font::Family, theme::Custom, widget::image::Handle};
 use serde::{Deserialize, Serialize};
 
+#[cfg(target_os = "macos")]
+use crate::utils::handle_from_icns;
 use crate::{
     app::apps::{App, AppCommand},
     commands::Function,
-    utils::handle_from_icns,
 };
 
 /// The main config struct (effectively the config file's "schema")
@@ -177,13 +178,14 @@ impl Shelly {
     /// Converts the shelly struct to an app so that it can be added to the app list
     pub fn to_app(&self) -> App {
         let self_clone = self.clone();
-        let icon = self_clone.icon_path.and_then(|x| {
+        let icon = self_clone.icon_path.map(|x| {
             let x = x.replace("~", &std::env::var("HOME").unwrap());
+            #[cfg(target_os = "macos")]
             if x.ends_with(".icns") {
-                handle_from_icns(Path::new(&x))
-            } else {
-                Some(Handle::from_path(Path::new(&x)))
+                return handle_from_icns(Path::new(&x));
             }
+
+            Some(Handle::from_path(Path::new(&x)))
         });
         App {
             open_command: AppCommand::Function(Function::RunShellCommand(
@@ -191,7 +193,7 @@ impl Shelly {
                 self_clone.alias_lc.clone(),
             )),
             desc: "Shell Command".to_string(),
-            icons: icon,
+            icons: icon.flatten(),
             name: self_clone.alias,
             name_lc: self_clone.alias_lc,
         }

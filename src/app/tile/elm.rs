@@ -1,6 +1,7 @@
 //! This module handles the logic for the new and view functions according to the elm
 //! architecture. If the subscription function becomes too large, it should be moved to this file
 
+#[cfg(not(target_os = "linux"))]
 use global_hotkey::hotkey::HotKey;
 use iced::border::Radius;
 use iced::widget::scrollable::{Anchor, Direction, Scrollbar};
@@ -16,9 +17,9 @@ use crate::app::WINDOW_WIDTH;
 use crate::app::pages::clipboard::clipboard_view;
 use crate::app::pages::emoji::emoji_page;
 use crate::app::tile::AppIndex;
-use crate::utils::get_installed_apps;
 use crate::config::Theme;
 use crate::styles::{contents_style, rustcast_text_input_style, tint, with_alpha};
+use crate::utils::get_installed_apps;
 use crate::{
     app::{Message, Page, apps::App, default_settings, tile::Tile},
     config::Config,
@@ -45,10 +46,34 @@ pub fn default_app_paths() -> Vec<String> {
     {
         Vec::new()
     }
+
+    #[cfg(target_os = "linux")]
+    {
+        use std::path::PathBuf;
+
+        let mut dirs = Vec::new();
+
+        let user_dir: PathBuf = std::env::var("XDG_DATA_HOME")
+            .map(PathBuf::from)
+            .unwrap_or_else(|_| dirs::home_dir().unwrap().join(".local/share"));
+        dirs.push(user_dir.join("applications").to_string_lossy().to_string());
+
+        let sys_dirs = std::env::var("XDG_DATA_DIRS")
+            .unwrap_or_else(|_| "/usr/local/share:/usr/share".to_string());
+
+        for dir in sys_dirs.split(':') {
+            dirs.push(PathBuf::from(dir).to_string_lossy().to_string());
+        }
+
+        dirs
+    }
 }
 
 /// Initialise the base window
-pub fn new(hotkey: HotKey, config: &Config) -> (Tile, Task<Message>) {
+pub fn new(
+    #[cfg(not(target_os = "linux"))] hotkey: HotKey,
+    config: &Config,
+) -> (Tile, Task<Message>) {
     #[allow(unused_mut)]
     let mut settings = default_settings();
 
@@ -63,11 +88,16 @@ pub fn new(hotkey: HotKey, config: &Config) -> (Tile, Task<Message>) {
     }
 
     // id unused on windows, but not macos
-    #[cfg_attr(target_os = "windows", allow(unused))]
+    #[allow(unused)]
     let (id, open) = window::open(settings);
 
     #[cfg(target_os = "windows")]
     let open: Task<iced::window::Id> = open.discard();
+
+    #[cfg(target_os = "linux")]
+    let open = open
+        .discard()
+        .chain(window::run(id, |_| Message::OpenWindow));
 
     #[cfg(target_os = "macos")]
     let open = open.discard().chain(window::run(id, |handle| {
@@ -91,12 +121,15 @@ pub fn new(hotkey: HotKey, config: &Config) -> (Tile, Task<Message>) {
             results: vec![],
             options,
             emoji_apps: AppIndex::from_apps(App::emoji_apps()),
+            #[cfg(not(target_os = "linux"))]
             hotkey,
             visible: true,
+            #[cfg(not(target_os = "linux"))]
             clipboard_hotkey: config
                 .clipboard_hotkey
                 .clone()
                 .and_then(|x| x.parse::<HotKey>().ok()),
+            #[cfg(target_os = "macos")]
             frontmost: None,
             focused: false,
             config: config.clone(),
@@ -189,6 +222,10 @@ pub fn view(tile: &Tile, wid: window::Id) -> Element<'_, Message> {
                 .push(footer(tile.config.theme.clone(), results_count))
                 .spacing(0),
         )
+        .width(Length::Fixed(WINDOW_WIDTH))
+        .height(Length::Shrink)
+        .align_x(Alignment::Center)
+        .align_y(Alignment::Start)
         .style(|_| container::Style {
             text_color: None,
             background: None,
@@ -202,6 +239,10 @@ pub fn view(tile: &Tile, wid: window::Id) -> Element<'_, Message> {
 
         container(contents.clip(false))
             .style(|_| contents_style(&tile.config.theme))
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .align_x(Alignment::Center)
+            .align_y(Alignment::Start)
             .into()
     } else {
         space().into()
