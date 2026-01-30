@@ -9,10 +9,7 @@ use std::{
 use rayon::prelude::*;
 
 #[cfg(target_os = "macos")]
-use {
-    objc2_app_kit::NSWorkspace,
-    objc2_foundation::NSURL,
-};
+use {objc2_app_kit::NSWorkspace, objc2_foundation::NSURL};
 
 #[cfg(target_os = "windows")]
 use std::process::Command;

@@ -18,9 +18,9 @@ use crate::app::WINDOW_WIDTH;
 use crate::app::pages::clipboard::clipboard_view;
 use crate::app::pages::emoji::emoji_page;
 use crate::app::tile::AppIndex;
-use crate::utils::index_installed_apps;
 use crate::config::Theme;
 use crate::styles::{contents_style, rustcast_text_input_style, tint, with_alpha};
+use crate::utils::index_installed_apps;
 use crate::{
     app::{Message, Page, apps::App, default_settings, tile::Tile},
     config::Config,

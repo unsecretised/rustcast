@@ -12,7 +12,6 @@ use crate::{
     cross_platform::get_img_handle,
 };
 
-
 mod include_patterns;
 mod patterns;
 
