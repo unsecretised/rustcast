@@ -92,7 +92,7 @@ pub fn new(
     let (id, open) = window::open(settings);
 
     #[cfg(target_os = "windows")]
-    let open: Task<iced::window::Id> = open.discard();
+    let open: Task<crate::app::Message> = open.discard();
 
     #[cfg(target_os = "linux")]
     let open = open
@@ -121,16 +121,7 @@ pub fn new(
             results: vec![],
             options,
             emoji_apps: AppIndex::from_apps(App::emoji_apps()),
-            #[cfg(not(target_os = "linux"))]
-            hotkey,
             visible: true,
-            #[cfg(not(target_os = "linux"))]
-            clipboard_hotkey: config
-                .clipboard_hotkey
-                .clone()
-                .and_then(|x| x.parse::<HotKey>().ok()),
-            #[cfg(target_os = "macos")]
-            frontmost: None,
             focused: false,
             config: config.clone(),
             theme: config.theme.to_owned().into(),
@@ -138,6 +129,25 @@ pub fn new(
             tray_icon: None,
             sender: None,
             page: Page::Main,
+
+            #[cfg(not(target_os = "windows"))]
+            frontmost: None,
+
+            #[cfg(target_os = "windows")]
+            frontmost: unsafe {
+                use windows::Win32::UI::WindowsAndMessaging::GetForegroundWindow;
+
+                Some(GetForegroundWindow())
+            },
+
+            #[cfg(not(target_os = "linux"))]
+            hotkey,
+
+            #[cfg(not(target_os = "linux"))]
+            clipboard_hotkey: config
+                .clipboard_hotkey
+                .clone()
+                .and_then(|x| x.parse::<HotKey>().ok()),
         },
         open,
     )

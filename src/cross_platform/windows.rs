@@ -14,6 +14,10 @@ use {
         },
         core::GUID,
     },
+    std::{
+        process::Command,
+        thread
+    }
 };
 
 fn get_apps_from_registry(apps: &mut Vec<App>) {

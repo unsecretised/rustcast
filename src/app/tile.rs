@@ -254,6 +254,8 @@ impl Tile {
 
         #[cfg(target_os = "windows")]
         {
+            use windows::Win32::UI::WindowsAndMessaging::GetForegroundWindow;
+            
             self.frontmost = Some(unsafe { GetForegroundWindow() });
         }
     }
