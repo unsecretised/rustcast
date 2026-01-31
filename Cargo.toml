@@ -48,6 +48,7 @@ open = "5.3.3"
 regex = "1.12.2"
 lnk = "0.6.3"
 codepage = "0.1.2"
+widestring = "1.2.1"
 
 [package.metadata.bundle]
 name = "RustCast"

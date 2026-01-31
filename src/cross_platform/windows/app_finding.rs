@@ -2,9 +2,12 @@ use {
     crate::{
         app::apps::{App, AppCommand},
         commands::Function,
-        cross_platform::windows::get_acp,
+        cross_platform::windows::{
+            extract_appicons::{extract_icons, get_first_icon},
+            get_acp,
+        },
     },
-    std::path::PathBuf,
+    std::path::{Path, PathBuf},
     walkdir::WalkDir,
     windows::{
         Win32::{
@@ -66,11 +69,16 @@ pub fn get_apps_from_registry(apps: &mut Vec<App>) {
             if !display_name.is_empty() {
                 use crate::{app::apps::AppCommand, commands::Function};
 
+                let icon = get_first_icon(PathBuf::from(PathBuf::from(&exe)))
+                    .inspect_err(|e| tracing::error!("Error getting icons: {e}"))
+                    .ok()
+                    .flatten();
+
                 apps.push(App {
                     open_command: AppCommand::Function(Function::OpenApp(exe)),
                     name: display_name.clone().into_string().unwrap(),
                     name_lc: display_name.clone().into_string().unwrap().to_lowercase(),
-                    icons: None,
+                    icons: icon,
                     desc: "Application".to_string(),
                 })
             }
@@ -114,34 +122,41 @@ pub fn index_start_menu() -> Vec<App> {
 
             if ext.is_none() {
                 tracing::trace!("{} has no extension (maybe a dir)", path.display());
-                return None
+                return None;
             }
 
-            if let Some(ext) = ext && ext != "lnk" {
+            if let Some(ext) = ext
+                && ext != "lnk"
+            {
                 tracing::trace!("{} not a .lnk file, skipping", path.display());
-                return None
+                return None;
             }
-            
+
             let lnk = lnk::ShellLink::open(path, get_acp());
 
             match lnk {
                 Ok(x) => {
                     let target = x.link_target();
 
-                    tracing::trace!(
-                        "Link at {} loaded (target: {:?})", 
-                        path.display(),
-                        &target
-                    );
+                    tracing::trace!("Link at {} loaded (target: {:?})", path.display(), &target);
 
                     match target {
-                        Some(target) => Some(App {
-                            open_command: AppCommand::Function(Function::OpenApp(target.clone())),
-                            desc: "".to_string(),
-                            icons: None,
-                            name: entry.file_name().to_string_lossy().to_string(),
-                            name_lc: entry.file_name().to_string_lossy().to_string(),
-                        }),
+                        Some(target) => {
+                            let icon = get_first_icon(PathBuf::from(&target))
+                                .inspect_err(|e| tracing::error!("Error getting icons: {e}"))
+                                .ok()
+                                .flatten();
+
+                            Some(App {
+                                open_command: AppCommand::Function(Function::OpenApp(
+                                    target.clone(),
+                                )),
+                                desc: "".to_string(),
+                                icons: icon,
+                                name: entry.file_name().to_string_lossy().to_string(),
+                                name_lc: entry.file_name().to_string_lossy().to_string(),
+                            })
+                        }
                         None => {
                             tracing::trace!(
                                 "Link at {} has no target, skipped",

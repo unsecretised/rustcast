@@ -4013,6 +4013,7 @@ dependencies = [
  "tray-icon",
  "url",
  "walkdir",
+ "widestring",
  "windows 0.58.0",
  "winreg",
 ]
@@ -5345,6 +5346,12 @@ dependencies = [
  "thiserror 2.0.18",
  "web-sys",
 ]
+
+[[package]]
+name = "widestring"
+version = "1.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "72069c3113ab32ab29e5584db3c6ec55d416895e60715417b5b883a357c3e471"
 
 [[package]]
 name = "winapi"
