@@ -80,7 +80,7 @@ pub fn default_settings() -> Settings {
             width: WINDOW_WIDTH,
             height: DEFAULT_WINDOW_HEIGHT,
         },
-        icon: Some(crate::icon::iced_icon::icon_64()),
+        icon: Some(crate::icon::iced_icon::icon_128()),
         ..Default::default()
     }
 }
