@@ -6,6 +6,7 @@ mod config;
 mod styles;
 mod unit_conversion;
 mod utils;
+mod icon;
 
 mod cross_platform;
 

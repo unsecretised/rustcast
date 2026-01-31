@@ -1,7 +1,6 @@
 //! This modules handles the logic for each "app" that rustcast can load
 //!
 //! An "app" is effectively, one of the results that rustcast returns when you search for something
-use std::path::Path;
 
 use iced::{
     Alignment,
@@ -13,7 +12,6 @@ use crate::{
     app::{Message, Page, RUSTCAST_DESC_NAME},
     clipboard::ClipBoardContentType,
     commands::Function,
-    cross_platform::get_img_handle,
     styles::{result_button_style, result_row_container_style},
 };
 
@@ -73,54 +71,42 @@ impl App {
             App {
                 open_command: AppCommand::Function(Function::Quit),
                 desc: RUSTCAST_DESC_NAME.to_string(),
-                icons: get_img_handle(Path::new(
-                    "/Applications/Rustcast.app/Contents/Resources/icon.icns",
-                )),
+                icons: Some(crate::icon::iced_img_handle::icon_256()),
                 name: "Quit RustCast".to_string(),
                 name_lc: "quit".to_string(),
             },
             App {
                 open_command: AppCommand::Function(Function::OpenPrefPane),
                 desc: RUSTCAST_DESC_NAME.to_string(),
-                icons: get_img_handle(Path::new(
-                    "/Applications/Rustcast.app/Contents/Resources/icon.icns",
-                )),
+                icons: Some(crate::icon::iced_img_handle::icon_256()),
                 name: "Open RustCast Preferences".to_string(),
                 name_lc: "settings".to_string(),
             },
             App {
                 open_command: AppCommand::Message(Message::SwitchToPage(Page::EmojiSearch)),
                 desc: RUSTCAST_DESC_NAME.to_string(),
-                icons: get_img_handle(Path::new(
-                    "/Applications/Rustcast.app/Contents/Resources/icon.icns",
-                )),
+                icons: Some(crate::icon::iced_img_handle::icon_256()),
                 name: "Search for an Emoji".to_string(),
                 name_lc: "emoji".to_string(),
             },
             App {
                 open_command: AppCommand::Message(Message::SwitchToPage(Page::ClipboardHistory)),
                 desc: RUSTCAST_DESC_NAME.to_string(),
-                icons: get_img_handle(Path::new(
-                    "/Applications/Rustcast.app/Contents/Resources/icon.icns",
-                )),
+                icons: Some(crate::icon::iced_img_handle::icon_256()),
                 name: "Clipboard History".to_string(),
                 name_lc: "clipboard".to_string(),
             },
             App {
                 open_command: AppCommand::Message(Message::ReloadConfig),
                 desc: RUSTCAST_DESC_NAME.to_string(),
-                icons: get_img_handle(Path::new(
-                    "/Applications/Rustcast.app/Contents/Resources/icon.icns",
-                )),
+                icons: Some(crate::icon::iced_img_handle::icon_256()),
                 name: "Reload RustCast".to_string(),
                 name_lc: "refresh".to_string(),
             },
             App {
                 open_command: AppCommand::Display,
                 desc: RUSTCAST_DESC_NAME.to_string(),
-                icons: get_img_handle(Path::new(
-                    "/Applications/Rustcast.app/Contents/Resources/icon.icns",
-                )),
+                icons: Some(crate::icon::iced_img_handle::icon_256()),
                 name: format!("Current RustCast Version: {app_version}"),
                 name_lc: "version".to_string(),
             },
@@ -129,9 +115,7 @@ impl App {
                     "/System/Library/CoreServices/Finder.app".to_string(),
                 )),
                 desc: "Application".to_string(),
-                icons: get_img_handle(Path::new(
-                    "/System/Library/CoreServices/Finder.app/Contents/Resources/Finder.icns",
-                )),
+                icons: Some(crate::icon::iced_img_handle::icon_256()),
                 name: "Finder".to_string(),
                 name_lc: "finder".to_string(),
             },
@@ -174,9 +158,9 @@ impl App {
             && let Some(icon) = &self.icons
         {
             row = row.push(
-                container(Viewer::new(icon).height(40).width(40))
-                    .width(40)
-                    .height(40),
+                container(Viewer::new(icon).height(50).width(50))
+                    .width(50)
+                    .height(50),
             );
         }
         row = row.push(container(text_block).width(Fill));
