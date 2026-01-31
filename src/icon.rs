@@ -21,25 +21,25 @@ macro_rules! static_geticon_imghandle {
     };
 }
 
-const IMG_64: &[u8] = include_bytes!("../assets/icon/icon64.png");
-const IMG_128: &[u8] = include_bytes!("../assets/icon/icon128.png");
+// const IMG_64: &[u8] = include_bytes!("../assets/icon/icon64.png");
+// const IMG_128: &[u8] = include_bytes!("../assets/icon/icon128.png");
 const IMG_256: &[u8] = include_bytes!("../assets/icon/icon256.png");
-const IMG_512: &[u8] = include_bytes!("../assets/icon/icon512.png");
+// const IMG_512: &[u8] = include_bytes!("../assets/icon/icon512.png");
 
 pub mod iced_icon {
     use super::*;
 
-    static_geticon!(icon_64, IMG_64, 64);
-    static_geticon!(icon_128, IMG_128, 128);
+    // static_geticon!(icon_64, IMG_64, 64);
+    // static_geticon!(icon_128, IMG_128, 128);
     static_geticon!(icon_256, IMG_256, 256);
-    static_geticon!(icon_512, IMG_512, 512);
+    // static_geticon!(icon_512, IMG_512, 512);
 }
 
 pub mod iced_img_handle {
     use super::*;
 
-    static_geticon_imghandle!(icon_64, IMG_64);
-    static_geticon_imghandle!(icon_128, IMG_128);
+    // static_geticon_imghandle!(icon_64, IMG_64);
+    // static_geticon_imghandle!(icon_128, IMG_128);
     static_geticon_imghandle!(icon_256, IMG_256);
-    static_geticon_imghandle!(icon_512, IMG_512);
+    // static_geticon_imghandle!(icon_512, IMG_512);
 }
