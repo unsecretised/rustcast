@@ -15,6 +15,9 @@ use crate::{
     styles::{result_button_style, result_row_container_style},
 };
 
+#[cfg(target_os = "macos")]
+use std::path::PathBuf;
+
 /// This tells each "App" what to do when it is clicked, whether it is a function, a message, or a display
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
