@@ -1,19 +1,17 @@
 //! This modules handles the logic for each "app" that rustcast can load
 //!
 //! An "app" is effectively, one of the results that rustcast returns when you search for something
-use std::path::Path;
 
 use iced::{
     Alignment,
     Length::Fill,
-    widget::{Button, Row, Text, container, image::{FilterMethod, Viewer}, text::Wrapping},
+    widget::{Button, Row, Text, container, image::Viewer, text::Wrapping},
 };
 
 use crate::{
     app::{Message, Page, RUSTCAST_DESC_NAME},
     clipboard::ClipBoardContentType,
     commands::Function,
-    cross_platform::get_img_handle,
     styles::{result_button_style, result_row_container_style},
 };
 
