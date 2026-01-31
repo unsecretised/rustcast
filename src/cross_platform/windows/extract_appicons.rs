@@ -1,6 +1,6 @@
 //! Extracts icons from executables etc.
 
-use std::{ffi::c_void, path::Path};
+use std::path::Path;
 
 use iced::widget;
 use widestring::U16CString;
@@ -8,9 +8,8 @@ use windows::{
     Win32::{
         Foundation::TRUE,
         Graphics::Gdi::{
-            BITMAP, BITMAPINFO, BITMAPINFOHEADER, CreateCompatibleDC, DIB_RGB_COLORS, DeleteDC,
-            DeleteObject, GetBitmapBits, GetBitmapDimensionEx, GetDIBits, GetObjectW, HBITMAP,
-            SelectObject,
+            BITMAPINFO, BITMAPINFOHEADER, CreateCompatibleDC, DIB_RGB_COLORS, DeleteDC,
+            DeleteObject, GetDIBits, HBITMAP, SelectObject,
         },
         UI::{
             Shell::ExtractIconExW,
@@ -88,7 +87,7 @@ pub fn extract_icons(path: impl AsRef<Path>) -> anyhow::Result<Vec<widget::image
 pub fn get_first_icon(path: impl AsRef<Path>) -> anyhow::Result<Option<widget::image::Handle>> {
     let mut icons = extract_icons(path)?;
 
-    if icons.len() > 0 {
+    if !icons.is_empty() {
         Ok(Some(icons.remove(0))) // .remove is needed, since I want it to be moved out
     } else {
         Ok(None)
@@ -172,5 +171,5 @@ fn get_icon_bitmap(icon_info: ICONINFOEXW) -> Result<(BITMAPINFO, Vec<u8>), wind
         DeleteObject(icon_info.hbmMask).ok()?;
     }
 
-    return Ok((bmp_info, buffer));
+    Ok((bmp_info, buffer))
 }

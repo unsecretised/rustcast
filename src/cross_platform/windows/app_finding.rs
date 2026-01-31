@@ -2,12 +2,9 @@ use {
     crate::{
         app::apps::{App, AppCommand},
         commands::Function,
-        cross_platform::windows::{
-            extract_appicons::{extract_icons, get_first_icon},
-            get_acp,
-        },
+        cross_platform::windows::{extract_appicons::get_first_icon, get_acp},
     },
-    std::path::{Path, PathBuf},
+    std::path::PathBuf,
     walkdir::WalkDir,
     windows::{
         Win32::{
@@ -69,7 +66,7 @@ pub fn get_apps_from_registry(apps: &mut Vec<App>) {
             if !display_name.is_empty() {
                 use crate::{app::apps::AppCommand, commands::Function};
 
-                let icon = get_first_icon(PathBuf::from(PathBuf::from(&exe)))
+                let icon = get_first_icon(PathBuf::from(&exe))
                     .inspect_err(|e| tracing::error!("Error getting icons: {e}"))
                     .ok()
                     .flatten();
