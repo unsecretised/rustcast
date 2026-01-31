@@ -71,13 +71,15 @@ fn search_dir(
 
             #[cfg(debug_assertions)]
             tracing::trace!("Executable loaded  [kfolder]: {:?}", path.to_str());
-        
+
             #[cfg(target_os = "windows")]
             let icon = {
                 use crate::cross_platform::windows::appicon::get_first_icon;
 
                 get_first_icon(path)
-                    .inspect_err(|e| tracing::error!("Error getting icon for {}: {e}", path.display()))
+                    .inspect_err(|e| {
+                        tracing::error!("Error getting icon for {}: {e}", path.display())
+                    })
                     .ok()
                     .flatten()
             };
@@ -211,7 +213,7 @@ pub fn index_installed_apps(config: &Config) -> anyhow::Result<Vec<App>> {
 }
 
 /// Converts a slice of BGRA data to RGBA using SIMD
-/// 
+///
 /// Stolen from https://stackoverflow.com/a/78190249/
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 pub fn bgra_to_rgba(data: &mut [u8]) {
@@ -224,7 +226,7 @@ pub fn bgra_to_rgba(data: &mut [u8]) {
     use std::arch::x86::_mm_shuffle_epi8;
     #[cfg(target_arch = "x86_64")]
     use std::arch::x86_64::_mm_shuffle_epi8;
-    // 
+    //
     // The shuffle mask for converting BGRA -> RGBA
     let mask: __m128i = unsafe {
         _mm_setr_epi8(
@@ -248,7 +250,7 @@ pub fn bgra_to_rgba(data: &mut [u8]) {
 pub fn bgra_to_rgba(data: &mut [u8]) {
     for i in (0..data.len()).step_by(4) {
         let r = data[i + 2];
-        
+
         data[i + 2] = data[i];
         data[i] = r;
     }
