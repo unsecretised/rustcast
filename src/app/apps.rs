@@ -124,6 +124,7 @@ impl App {
                 name: format!("Current RustCast Version: {app_version}"),
                 name_lc: "version".to_string(),
             },
+            #[cfg(target_os = "macos")]
             App {
                 open_command: AppCommand::Function(Function::OpenApp(
                     "/System/Library/CoreServices/Finder.app".to_string(),

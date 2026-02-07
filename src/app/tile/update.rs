@@ -46,7 +46,16 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
         Message::SetSender(sender) => {
             tile.sender = Some(sender.clone());
             if tile.config.show_trayicon {
-                tile.tray_icon = Some(menu_icon(tile.hotkey, sender));
+                // Tray icon seems to not work on linux (gdk only but this is wgpu?)
+                // I do not know so much abt rendering stuff
+                #[cfg(not(target_os = "linux"))]
+                {
+                    tile.tray_icon = Some(menu_icon(
+                        #[cfg(not(target_os = "linux"))]
+                        tile.hotkey,
+                        sender,
+                    ));
+                }
             }
             Task::none()
         }
@@ -185,40 +194,43 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
             Task::none()
         }
 
-        Message::KeyPressed(hk_id) => {
-            let is_clipboard_hotkey = tile
-                .clipboard_hotkey
-                .map(|hotkey| hotkey.id == hk_id)
-                .unwrap_or(false);
-            let is_open_hotkey = hk_id == tile.hotkey.id;
+        Message::OpenToPage(page) => {
+            if !tile.visible {
+                return Task::batch([open_window(), Task::done(Message::SwitchToPage(page))]);
+            }
 
-            let clipboard_page_task = if is_clipboard_hotkey {
-                Task::done(Message::SwitchToPage(Page::ClipboardHistory))
-            } else if is_open_hotkey {
-                Task::done(Message::SwitchToPage(Page::Main))
+            tile.visible = !tile.visible;
+
+            let clear_search_query = if tile.config.buffer_rules.clear_on_hide {
+                Task::done(Message::ClearSearchQuery)
             } else {
                 Task::none()
             };
 
-            if is_open_hotkey || is_clipboard_hotkey {
-                if !tile.visible {
-                    return Task::batch([open_window(), clipboard_page_task]);
-                }
+            let to_close = window::latest().map(|x| x.unwrap());
+            Task::batch([
+                to_close.map(Message::HideWindow),
+                clear_search_query,
+                Task::done(Message::ReturnFocus),
+            ])
+        }
 
-                tile.visible = !tile.visible;
+        Message::KeyPressed(_) => Task::none(),
 
-                let clear_search_query = if tile.config.buffer_rules.clear_on_hide {
-                    Task::done(Message::ClearSearchQuery)
-                } else {
-                    Task::none()
-                };
+        #[cfg(not(target_os = "linux"))]
+        Message::HotkeyPressed(hk_id) => {
+            // Linux Clipboard and Open Hotkey are gonna be handled via a socket
+            let is_clipboard_hotkey = tile
+                .clipboard_hotkey
+                .map(|hotkey| hotkey.id == hk_id)
+                .unwrap_or(false);
 
-                let to_close = window::latest().map(|x| x.unwrap());
-                Task::batch([
-                    to_close.map(Message::HideWindow),
-                    clear_search_query,
-                    Task::done(Message::ReturnFocus),
-                ])
+            let is_open_hotkey = hk_id == tile.hotkey.id;
+
+            if is_clipboard_hotkey {
+                handle_update(tile, Message::OpenToPage(Page::ClipboardHistory))
+            } else if is_open_hotkey {
+                handle_update(tile, Message::OpenToPage(Page::Main))
             } else {
                 Task::none()
             }
@@ -293,7 +305,13 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
         Message::WindowFocusChanged(wid, focused) => {
             tile.focused = focused;
             if !focused {
-                Task::done(Message::HideWindow(wid)).chain(Task::done(Message::ClearSearchQuery))
+                if cfg!(target_os = "macos") {
+                    Task::done(Message::HideWindow(wid))
+                        .chain(Task::done(Message::ClearSearchQuery))
+                } else {
+                    // linux seems to not wanna unfocus it on start making it not show
+                    Task::none()
+                }
             } else {
                 Task::none()
             }

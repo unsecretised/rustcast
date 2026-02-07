@@ -1,0 +1,5 @@
+[toolchain]
+channel = "stable"
+components = ["rustfmt", "clippy", "cargo"]
+targets = ["x86_64-apple-darwin", "x86_64-pc-windows-msvc"]
+profile = "default"

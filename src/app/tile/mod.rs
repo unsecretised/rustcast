@@ -21,6 +21,7 @@ use iced::{
     stream, window,
 };
 
+#[cfg(not(target_os = "linux"))]
 use global_hotkey::{GlobalHotKeyEvent, HotKeyState, hotkey::HotKey};
 
 use crate::{
@@ -106,7 +107,9 @@ pub struct Tile {
     frontmost: Option<HWND>,
     pub config: Config,
     /// The opening hotkey
+    #[cfg(not(target_os = "linux"))]
     hotkey: HotKey,
+    #[cfg(not(target_os = "linux"))]
     clipboard_hotkey: Option<HotKey>,
     clipboard_content: Vec<ClipBoardContentType>,
     tray_icon: Option<TrayIcon>,
@@ -148,7 +151,10 @@ impl Tile {
             _ => None,
         });
         Subscription::batch([
+            #[cfg(not(target_os = "linux"))]
             Subscription::run(handle_hotkeys),
+            #[cfg(target_os = "linux")]
+            Subscription::run(handle_socket),
             keyboard,
             Subscription::run(handle_recipient),
             Subscription::run(handle_hot_reloading),
@@ -260,7 +266,7 @@ impl Tile {
     }
 
     /// Restores the frontmost application.
-    #[allow(deprecated)]
+    #[allow(deprecated, unused)]
     pub fn restore_frontmost(&mut self) {
         #[cfg(target_os = "macos")]
         {
@@ -334,6 +340,7 @@ fn count_dirs_in_dir(dir: &PathBuf) -> usize {
 }
 
 /// This is the subscription function that handles hotkeys for hiding / showing the window
+#[cfg(not(target_os = "linux"))]
 fn handle_hotkeys() -> impl futures::Stream<Item = Message> {
     stream::channel(100, async |mut output| {
         let receiver = GlobalHotKeyEvent::receiver();
@@ -341,9 +348,47 @@ fn handle_hotkeys() -> impl futures::Stream<Item = Message> {
             if let Ok(event) = receiver.recv()
                 && event.state == HotKeyState::Pressed
             {
-                output.try_send(Message::KeyPressed(event.id)).unwrap();
+                output.try_send(Message::HotkeyPressed(event.id)).unwrap();
             }
             tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    })
+}
+
+#[cfg(target_os = "linux")]
+fn handle_socket() -> impl futures::Stream<Item = Message> {
+    stream::channel(100, async |mut output| {
+        let clipboard = env::args().any(|arg| arg.trim() == "--cphist");
+        if clipboard {
+            output
+                .try_send(Message::OpenToPage(Page::ClipboardHistory))
+                .unwrap();
+        }
+
+        use std::env;
+
+        use tokio::net::UnixListener;
+
+        let _ = fs::remove_file(crate::SOCKET_PATH);
+        let listener = UnixListener::bind(crate::SOCKET_PATH).unwrap();
+
+        while let Ok((mut stream, _address)) = listener.accept().await {
+            let mut output = output.clone();
+            tokio::spawn(async move {
+                use tokio::io::AsyncReadExt;
+                use tracing::info;
+
+                let mut s = String::new();
+                let _ = stream.read_to_string(&mut s).await;
+                info!("received socket command {s}");
+                if s.trim() == "toggle" {
+                    output.try_send(Message::OpenToPage(Page::Main)).unwrap();
+                } else if s.trim() == "clipboard" {
+                    output
+                        .try_send(Message::OpenToPage(Page::ClipboardHistory))
+                        .unwrap();
+                }
+            });
         }
     })
 }
