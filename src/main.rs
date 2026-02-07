@@ -94,8 +94,8 @@ fn main() -> iced::Result {
     {
         // error handling should really be improved soon (tm)
         use std::fs;
+        use std::os::unix::net::UnixListener;
         use std::{io::Write, os::unix::net::UnixStream};
-        use tokio::net::UnixListener;
         use tracing::info;
 
         if UnixListener::bind(SOCKET_PATH).is_err() {

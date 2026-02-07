@@ -22,7 +22,7 @@
       };
     in
     {
-      devShells.${system}.default = pkgs.mkShell {
+      devShells.${system}.default = pkgs.mkShell rec {
         strictDeps = true;
 
         nativeBuildInputs = with pkgs; [
@@ -40,13 +40,21 @@
           pango
           openssl
           xdotool
+          wayland
+          xorg.libXi
           gdk-pixbuf
+          xorg.libxcb
+          xorg.libX11
+          libxkbcommon
+          vulkan-loader
+          xorg.libXrandr
+          xorg.libXcursor
           gobject-introspection
           libayatana-appindicator
         ];
 
         shellHook = ''
-          export LD_LIBRARY_PATH=${pkgs.libayatana-appindicator}/lib:$LD_LIBRARY_PATH
+          export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:${toString (pkgs.lib.makeLibraryPath buildInputs)}";
         '';
       };
     };
