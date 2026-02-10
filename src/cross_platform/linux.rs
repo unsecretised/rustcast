@@ -8,8 +8,8 @@ use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
 use crate::{
     app::{
-        apps::{App, AppCommand},
-        tile::elm::default_app_paths,
+        apps::{App, AppCommand, AppData},
+        tile::elm::default_app_paths
     },
     config::Config,
 };
@@ -84,9 +84,9 @@ fn get_installed_apps(path: &Path, store_icons: bool) -> Vec<App> {
     };
 
     apps.push(App::new(
-        name.to_string(),
-        name.to_lowercase(),
-        desc.to_string(),
+        &name,
+        &name.to_lowercase(),
+        &desc,
         AppData::Command{
             command: cmd.to_string(),
             alias: args,
