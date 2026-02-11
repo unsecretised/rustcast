@@ -135,7 +135,17 @@ pub fn open_application(path: impl AsRef<Path>) {
             &objc2_foundation::NSString::from_str(&path.to_string_lossy()),
         ));
     }
+    #[cfg(target_os = "macos")]
+    {
+        NSWorkspace::new().openURL(&NSURL::fileURLWithPath(
+            &objc2_foundation::NSString::from_str(&path.to_string_lossy()),
+        ));
+    }
 
+    #[cfg(target_os = "linux")]
+    {
+        Command::new(path).status().ok();
+    }
     #[cfg(target_os = "linux")]
     {
         Command::new(path).status().ok();
