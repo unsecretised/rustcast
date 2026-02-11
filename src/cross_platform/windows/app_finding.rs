@@ -134,14 +134,16 @@ pub fn index_start_menu() -> Vec<App> {
                     match target {
                         Some(target) => {
                             let target = PathBuf::from(target);
+                            let file_name = target.file_name().unwrap(); // TODO: should this be handled?
+
                             let icon = get_first_icon(&target)
                                 .inspect_err(|e| tracing::error!("Error getting icons: {e}"))
                                 .ok()
                                 .flatten();
 
                             Some(App::new_executable(
-                                &target.to_string_lossy(),
-                                &target.to_string_lossy().to_lowercase(),
+                                &file_name.to_string_lossy(),
+                                &file_name.to_string_lossy().to_lowercase(),
                                 "Shortcut",
                                 &target,
                                 icon,
