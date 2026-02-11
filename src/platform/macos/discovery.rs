@@ -192,6 +192,9 @@ fn is_in_user_app_directory(path: &Path) -> bool {
 fn query_app(url: impl AsRef<NSURL>, store_icons: bool) -> Option<App> {
     let url = url.as_ref();
     let path = url.to_file_path()?;
+    if is_nested_inside_another_app(&path) || is_helper_location(&path) {
+        return None;
+    }
 
     let bundle = NSBundle::bundleWithURL(url)?;
     let info = bundle.infoDictionary()?;
@@ -216,7 +219,7 @@ fn query_app(url: impl AsRef<NSURL>, store_icons: bool) -> Option<App> {
     };
 
     // Filter out background-only apps (daemons, agents, internal system apps)
-    if is_truthy(ns_string!("LSUIElement")) || is_truthy(ns_string!("LSBackgroundOnly")) {
+    if is_truthy(ns_string!("LSBackgroundOnly")) {
         return None;
     }
 
@@ -279,4 +282,28 @@ pub(crate) fn get_installed_apps(store_icons: bool) -> Vec<App> {
     urls.into_par_iter()
         .filter_map(|url| query_app(url, store_icons))
         .collect()
+}
+
+fn is_nested_inside_another_app(app_path: &Path) -> bool {
+    // Walk up ancestors; if we find an *.app component that is NOT the last component,
+    // then this app is nested inside another app bundle.
+    let comps: Vec<_> = app_path.components().collect();
+    // Normalize: if path ends with ".../Foo.app", we look for any earlier "*.app".
+    for component in comps.iter().take(comps.len().saturating_sub(1)) {
+        if let std::path::Component::Normal(name) = component
+            && name.to_string_lossy().ends_with(".app")
+        {
+            return true;
+        }
+    }
+    false
+}
+
+fn is_helper_location(path: &Path) -> bool {
+    let s = path.to_string_lossy();
+    s.contains("/Contents/Library/LoginItems/")
+        || s.contains("/Contents/XPCServices/")
+        || s.contains("/Contents/Helpers/")
+        || s.contains("/Contents/Frameworks/")
+        || s.contains("/Library/PrivilegedHelperTools/")
 }
