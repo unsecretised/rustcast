@@ -40,13 +40,12 @@ pub(super) fn handle_change(tile: &mut Tile, input: &str, id: Id) -> iced::Task<
         );
     } else if tile.query_lc == "randomvar" {
         let rand_num = rand::random_range(0..100);
-        tile.results = vec![App {
-            open_command: AppCommand::Function(Function::RandomVar(rand_num)),
-            desc: "Easter egg".to_string(),
-            icons: None,
-            name: rand_num.to_string(),
-            name_lc: String::new(),
-        }];
+        tile.results = vec![App::new_builtin(
+            &rand_num.to_string(),
+            "",
+            "Easter egg",
+            AppCommand::Function(Function::RandomVar(rand_num)),
+        )];
         return window::resize(
             id,
             iced::Size {
@@ -56,13 +55,12 @@ pub(super) fn handle_change(tile: &mut Tile, input: &str, id: Id) -> iced::Task<
         );
     } else {
         if tile.query_lc == "67" {
-            tile.results = vec![App {
-                open_command: AppCommand::Function(Function::RandomVar(67)),
-                desc: "Easter egg".to_string(),
-                icons: None,
-                name: 67.to_string(),
-                name_lc: String::new(),
-            }];
+            tile.results = vec![App::new_builtin(
+                "67",
+                "",
+                "Easter egg",
+                AppCommand::Function(Function::RandomVar(67)),
+            )];
             return window::resize(
                 id,
                 iced::Size {
@@ -72,13 +70,12 @@ pub(super) fn handle_change(tile: &mut Tile, input: &str, id: Id) -> iced::Task<
             );
         }
         if tile.query_lc.ends_with("?") {
-            tile.results = vec![App {
-                open_command: AppCommand::Function(Function::GoogleSearch(tile.query.clone())),
-                icons: None,
-                desc: "Web Search".to_string(),
-                name: format!("Search for: {}", tile.query),
-                name_lc: String::new(),
-            }];
+            tile.results = vec![App::new_builtin(
+                &format!("Search for: {}", tile.query),
+                "",
+                "Web Search",
+                AppCommand::Function(Function::GoogleSearch(tile.query.clone())),
+            )];
             return window::resize(
                 id,
                 iced::Size::new(WINDOW_WIDTH, 55. + DEFAULT_WINDOW_HEIGHT),
@@ -94,13 +91,13 @@ pub(super) fn handle_change(tile: &mut Tile, input: &str, id: Id) -> iced::Task<
     if tile.results.is_empty()
         && let Some(res) = Expr::from_str(&tile.query).ok()
     {
-        tile.results.push(App {
-            open_command: AppCommand::Function(Function::Calculate(res.clone())),
-            desc: RUSTCAST_DESC_NAME.to_string(),
-            icons: None,
-            name: res.eval().map(|x| x.to_string()).unwrap_or("".to_string()),
-            name_lc: "".to_string(),
-        });
+        let res_string = res.eval().map(|x| x.to_string()).unwrap_or(String::new());
+        tile.results.push(App::new_builtin(
+            RUSTCAST_DESC_NAME,
+            &res_string,
+            "",
+            AppCommand::Function(Function::Calculate(res.clone())),
+        ));
     } else if tile.results.is_empty()
         && let Some(conversions) = unit_conversion::convert_query(&tile.query)
     {
@@ -117,47 +114,41 @@ pub(super) fn handle_change(tile: &mut Tile, input: &str, id: Id) -> iced::Task<
                     unit_conversion::format_number(conversion.target_value),
                     conversion.target_unit.name
                 );
-                App {
-                    open_command: AppCommand::Function(Function::CopyToClipboard(
-                        ClipBoardContentType::Text(target.clone()),
-                    )),
-                    desc: source,
-                    icons: None,
-                    name: target,
-                    name_lc: String::new(),
-                }
+                App::new_builtin(
+                    &source,
+                    &target,
+                    "Copy to clipboard",
+                    AppCommand::Function(Function::CopyToClipboard(ClipBoardContentType::Text(
+                        target.clone(),
+                    ))),
+                )
             })
             .collect();
     } else if tile.results.is_empty() && url::Url::parse(input).is_ok() {
-        tile.results.push(App {
-            open_command: AppCommand::Function(Function::OpenWebsite(tile.query.clone())),
-            desc: "Web Browsing".to_string(),
-            icons: None,
-            name: "Open Website: ".to_string() + &tile.query,
-            name_lc: "".to_string(),
-        });
+        tile.results.push(App::new_builtin(
+            "Web Browsing",
+            "",
+            &format!("Open website: {}", tile.query),
+            AppCommand::Function(Function::OpenWebsite(tile.query.clone())),
+        ));
     } else if tile.query_lc.split(' ').count() > 1 {
-        tile.results.push(App {
-            open_command: AppCommand::Function(Function::GoogleSearch(tile.query.clone())),
-            icons: None,
-            desc: "Web Search".to_string(),
-            name: format!("Search for: {}", tile.query),
-            name_lc: String::new(),
-        });
+        tile.results.push(App::new_builtin(
+            &format!("Search for: {}", tile.query),
+            "",
+            "Web Search",
+            AppCommand::Function(Function::GoogleSearch(tile.query.clone())),
+        ));
     } else if tile.results.is_empty() && tile.query_lc == "lemon" {
         #[cfg(target_os = "macos")]
         {
             use std::path::Path;
 
-            tile.results.push(App {
-                open_command: AppCommand::Display,
-                desc: "Easter Egg".to_string(),
-                icons: Some(iced::widget::image::Handle::from_path(Path::new(
-                    "/Applications/Rustcast.app/Contents/Resources/lemon.png",
-                ))),
-                name: "Lemon".to_string(),
-                name_lc: "".to_string(),
-            });
+            tile.results.push(App::new_builtin(
+                "Easter Egg",
+                "Lemon",
+                "",
+                AppCommand::Display,
+            ));
         }
     }
     if !tile.query_lc.is_empty() && tile.page == Page::EmojiSearch {

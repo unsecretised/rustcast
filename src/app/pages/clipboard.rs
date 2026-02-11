@@ -30,7 +30,7 @@ pub fn clipboard_view(
             Text::new(
                 clipboard_content
                     .get(focussed_id as usize)
-                    .map(|x| x.to_app().name_lc)
+                    .map(|x| x.to_app().alias)
                     .unwrap_or("".to_string()),
             )
             .height(385)

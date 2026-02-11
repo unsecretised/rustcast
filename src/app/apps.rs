@@ -2,10 +2,15 @@
 //!
 //! An "app" is effectively, one of the results that rustcast returns when you search for something
 
+use std::{
+    path::{Path, PathBuf},
+    sync::atomic::{AtomicUsize, Ordering},
+};
+
 use iced::{
     Alignment,
     Length::Fill,
-    widget::{Button, Row, Text, container, image::Viewer, text::Wrapping},
+    widget::{self, Button, Row, Text, container, image::Viewer, text::Wrapping},
 };
 
 use crate::{
@@ -27,42 +32,134 @@ pub enum AppCommand {
     Display,
 }
 
+impl PartialEq for AppCommand {
+    fn eq(&self, other: &Self) -> bool {
+        // TODO: make an *actual* impl of PartialEq for Message
+        match (&self, &other) {
+            (Self::Function(a), Self::Function(b)) => a == b,
+            (Self::Display, Self::Display) => true,
+            _ => false,
+        }
+    }
+}
+
+/// A container for [`App`] data specific to a certain type of app.
+#[derive(Debug, Clone, PartialEq)]
+pub enum AppData {
+    /// A platform specific executable
+    Executable {
+        /// The executable path
+        path: PathBuf,
+        /// The executable icon
+        icon: Option<iced::widget::image::Handle>,
+    },
+    /// A shell command to be run
+    Command {
+        /// The command to run
+        command: String,
+        alias: String,
+        /// The icon to display in search results
+        icon: Option<iced::widget::image::Handle>,
+    },
+    /// Any builtin function
+    Builtin {
+        /// The [`AppCommand`] to run
+        command: AppCommand,
+    },
+}
+
 /// The main app struct, that represents an "App"
 ///
 /// This struct represents a command that rustcast can perform, providing the rustcast
 /// the data needed to search for the app, to display the app in search results, and to actually
-/// "run" the app.
-#[derive(Debug, Clone)]
+/// run the app.
+#[derive(Clone, Debug)]
 pub struct App {
-    pub open_command: AppCommand,
-    pub desc: String,
-    pub icons: Option<iced::widget::image::Handle>,
+    /// The app name
     pub name: String,
-    pub name_lc: String,
+
+    /// An alias to use while searching
+    pub alias: String,
+
+    /// The description for the app
+    pub desc: String,
+
+    /// The information specific to a certain type of app
+    pub app_data: AppData,
+
+    /// A unique ID generated for each instance of an App.
+    ///
+    /// This is made by atomically incrementing a counter every time a new instance of the struct
+    /// is made. The implementation of [`PartialEq`] uses this.
+    id: usize,
 }
 
 impl PartialEq for App {
     fn eq(&self, other: &Self) -> bool {
-        self.name_lc == other.name_lc
-            && self.icons == other.icons
-            && self.desc == other.desc
-            && self.name == other.name
+        self.app_data == other.app_data && self.name == other.name
     }
 }
 
 impl App {
+    /// Get the internal id
+    pub fn id(&self) -> usize {
+        self.id
+    }
+
+    /// Creates a new instance
+    pub fn new(name: &str, name_lc: &str, desc: &str, data: AppData) -> Self {
+        static ID: AtomicUsize = AtomicUsize::new(0);
+
+        Self {
+            alias: name_lc.to_string(),
+            name: name.to_string(),
+            desc: desc.to_string(),
+            id: ID.fetch_add(1, Ordering::Relaxed),
+            app_data: data,
+        }
+    }
+
+    /// Creates a new instance of the type [`AppData::Builtin`].
+    ///
+    /// This is mainly for convenience.
+    pub fn new_builtin(name: &str, name_lc: &str, desc: &str, command: AppCommand) -> Self {
+        Self::new(name, name_lc, desc, AppData::Builtin { command })
+    }
+
+    /// Creates a new instance of the type [`AppData::Executable`].
+    ///
+    /// This is mainly for convenience.
+    pub fn new_executable(
+        name: &str,
+        name_lc: &str,
+        desc: &str,
+        path: impl AsRef<Path>,
+        icon: Option<widget::image::Handle>,
+    ) -> Self {
+        Self::new(
+            name,
+            name_lc,
+            desc,
+            AppData::Executable {
+                path: path.as_ref().to_path_buf(),
+                icon,
+            },
+        )
+    }
+
     /// A vec of all the emojis as App structs
     pub fn emoji_apps() -> Vec<App> {
         emojis::iter()
             .filter(|x| x.unicode_version() < emojis::UnicodeVersion::new(17, 13))
-            .map(|x| App {
-                icons: None,
-                name: x.to_string(),
-                name_lc: x.name().to_string(),
-                open_command: AppCommand::Function(Function::CopyToClipboard(
-                    ClipBoardContentType::Text(x.to_string()),
-                )),
-                desc: x.name().to_string(),
+            .map(|x| {
+                App::new_builtin(
+                    x.name(),
+                    x.name(),
+                    "emoji",
+                    AppCommand::Function(Function::CopyToClipboard(ClipBoardContentType::Text(
+                        x.to_string(),
+                    ))),
+                )
             })
             .collect()
     }
@@ -71,58 +168,52 @@ impl App {
         let app_version = option_env!("APP_VERSION").unwrap_or("Unknown Version");
 
         vec![
-            App {
-                open_command: AppCommand::Function(Function::Quit),
-                desc: RUSTCAST_DESC_NAME.to_string(),
-                icons: Some(crate::icon::iced_img_handle::icon_256()),
-                name: "Quit RustCast".to_string(),
-                name_lc: "quit".to_string(),
-            },
-            App {
-                open_command: AppCommand::Function(Function::OpenPrefPane),
-                desc: RUSTCAST_DESC_NAME.to_string(),
-                icons: Some(crate::icon::iced_img_handle::icon_256()),
-                name: "Open RustCast Preferences".to_string(),
-                name_lc: "settings".to_string(),
-            },
-            App {
-                open_command: AppCommand::Message(Message::SwitchToPage(Page::EmojiSearch)),
-                desc: RUSTCAST_DESC_NAME.to_string(),
-                icons: Some(crate::icon::iced_img_handle::icon_256()),
-                name: "Search for an Emoji".to_string(),
-                name_lc: "emoji".to_string(),
-            },
-            App {
-                open_command: AppCommand::Message(Message::SwitchToPage(Page::ClipboardHistory)),
-                desc: RUSTCAST_DESC_NAME.to_string(),
-                icons: Some(crate::icon::iced_img_handle::icon_256()),
-                name: "Clipboard History".to_string(),
-                name_lc: "clipboard".to_string(),
-            },
-            App {
-                open_command: AppCommand::Message(Message::ReloadConfig),
-                desc: RUSTCAST_DESC_NAME.to_string(),
-                icons: Some(crate::icon::iced_img_handle::icon_256()),
-                name: "Reload RustCast".to_string(),
-                name_lc: "refresh".to_string(),
-            },
-            App {
-                open_command: AppCommand::Display,
-                desc: RUSTCAST_DESC_NAME.to_string(),
-                icons: Some(crate::icon::iced_img_handle::icon_256()),
-                name: format!("Current RustCast Version: {app_version}"),
-                name_lc: "version".to_string(),
-            },
+            Self::new_builtin(
+                "Quit RustCast",
+                "quit",
+                RUSTCAST_DESC_NAME,
+                AppCommand::Function(Function::Quit),
+            ),
+            Self::new_builtin(
+                "Open RustCast Preferences",
+                "settings",
+                RUSTCAST_DESC_NAME,
+                AppCommand::Function(Function::OpenPrefPane),
+            ),
+            Self::new_builtin(
+                "Search for an Emoji",
+                "emoji",
+                RUSTCAST_DESC_NAME,
+                AppCommand::Message(Message::SwitchToPage(Page::EmojiSearch)),
+            ),
+            Self::new_builtin(
+                "Clipboard History",
+                "clipboard",
+                RUSTCAST_DESC_NAME,
+                AppCommand::Message(Message::SwitchToPage(Page::ClipboardHistory)),
+            ),
+            Self::new_builtin(
+                "Reload RustCast",
+                "refresh",
+                RUSTCAST_DESC_NAME,
+                AppCommand::Message(Message::ReloadConfig),
+            ),
+            Self::new_builtin(
+                &format!("Current RustCast Version: {app_version}"),
+                "version",
+                RUSTCAST_DESC_NAME,
+                AppCommand::Display,
+            ),
             #[cfg(target_os = "macos")]
-            App {
-                open_command: AppCommand::Function(Function::OpenApp(PathBuf::from(
-                    "/System/Library/CoreServices/Finder.app",
-                ))),
-                desc: "Application".to_string(),
-                icons: Some(crate::icon::iced_img_handle::icon_256()),
-                name: "Finder".to_string(),
-                name_lc: "finder".to_string(),
-            },
+            Self::new_executable(
+                "Finder",
+                "finder",
+                "Application",
+                PathBuf::from("/System/Library/CoreServices/Finder.app"),
+                get_img_handle(Path::new(
+                    "/System/Library/CoreServices/Finder.app/Contents/Resources/Finder.icns",
+                )),
+            ),
         ]
     }
 
@@ -176,10 +267,23 @@ impl App {
         }
         row = row.push(container(text_block).width(Fill));
 
-        let msg = match self.open_command.clone() {
-            AppCommand::Function(func) => Some(Message::RunFunction(func)),
-            AppCommand::Message(msg) => Some(msg),
-            AppCommand::Display => None,
+        let msg = match self.app_data {
+            AppData::Builtin {
+                command: AppCommand::Function(func),
+                ..
+            } => Some(Message::RunFunction(func)),
+            AppData::Builtin {
+                command: AppCommand::Message(msg),
+                ..
+            } => Some(msg),
+            AppData::Builtin {
+                command: AppCommand::Display,
+                ..
+            } => None,
+            AppData::Executable { path, .. } => Some(Message::RunFunction(Function::OpenApp(path))),
+            AppData::Command { command, alias, .. } => Some(Message::RunFunction(
+                Function::RunShellCommand(command, alias),
+            )),
         };
 
         let theme_clone = theme.clone();

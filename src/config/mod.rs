@@ -7,8 +7,7 @@ use serde::{Deserialize, Serialize};
 #[cfg(target_os = "windows")]
 use crate::cross_platform::windows::app_finding::get_known_paths;
 use crate::{
-    app::apps::{App, AppCommand},
-    commands::Function,
+    app::apps::{App, AppData},
     cross_platform::get_img_handle,
 };
 
@@ -206,15 +205,15 @@ impl Shelly {
             let x = x.replace("~", &std::env::var("HOME").unwrap());
             get_img_handle(&PathBuf::from(x))
         });
-        App {
-            open_command: AppCommand::Function(Function::RunShellCommand(
-                self_clone.command,
-                self_clone.alias_lc.clone(),
-            )),
-            desc: "Shell Command".to_string(),
-            icons: icon.flatten(),
-            name: self_clone.alias,
-            name_lc: self_clone.alias_lc,
-        }
+        App::new(
+            &self_clone.alias,
+            &self_clone.alias_lc,
+            "Shell Command",
+            AppData::Command {
+                alias: self_clone.alias_lc.clone(),
+                command: self_clone.command,
+                icon: icon.flatten(),
+            },
+        )
     }
 }

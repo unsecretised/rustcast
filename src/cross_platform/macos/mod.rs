@@ -213,13 +213,13 @@ fn get_installed_apps(dir: impl AsRef<Path>, store_icons: bool) -> Vec<App> {
             };
 
             let name = file_name.strip_suffix(".app").unwrap().to_string();
-            Some(App {
-                open_command: AppCommand::Function(Function::OpenApp(PathBuf::from(path_str))),
-                desc: "Application".to_string(),
+            Some(App::new_executable(
+                &name,
+                &name.to_lowercase(),
+                "Application",
+                path,
                 icons,
-                name_lc: name.to_lowercase(),
-                name,
-            })
+            ))
         })
         .collect()
 }

@@ -29,7 +29,7 @@ pub enum Page {
 
 /// The types of arrow keys
 #[allow(dead_code)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum ArrowKey {
     Up,
     Down,
@@ -38,7 +38,7 @@ pub enum ArrowKey {
 }
 
 /// The ways the cursor can move when a key is pressed
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Move {
     Back,
     Forwards(String),

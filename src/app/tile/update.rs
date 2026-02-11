@@ -7,6 +7,7 @@ use iced::widget::{operation, operation::AbsoluteOffset};
 use iced::window;
 use rayon::slice::ParallelSliceMut;
 
+use crate::app::apps::AppData;
 use crate::app::{
     ArrowKey, DEFAULT_WINDOW_HEIGHT, Message, Move, Page, WINDOW_WIDTH, apps::App,
     apps::AppCommand, default_settings, menubar::menu_icon, tile::AppIndex, tile::Tile,
@@ -150,20 +151,24 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
             ])
         }
 
-        Message::OpenFocused => match tile.results.get(tile.focus_id as usize) {
-            Some(App {
-                open_command: AppCommand::Function(func),
+        Message::OpenFocused => match tile
+            .results
+            .get(tile.focus_id as usize)
+            .map(|x| &x.app_data)
+        {
+            Some(AppData::Builtin {
+                command: AppCommand::Function(func),
                 ..
             }) => Task::done(Message::RunFunction(func.to_owned())),
-            Some(App {
-                open_command: AppCommand::Message(msg),
+            Some(AppData::Builtin {
+                command: AppCommand::Message(msg),
                 ..
             }) => Task::done(msg.to_owned()),
-            Some(App {
-                open_command: AppCommand::Display,
+            Some(AppData::Builtin {
+                command: AppCommand::Display,
                 ..
             }) => Task::done(Message::ReturnFocus),
-            None => Task::none(),
+            _ => Task::none(),
         },
 
         Message::ReloadConfig => {

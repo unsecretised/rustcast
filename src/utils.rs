@@ -2,7 +2,6 @@
 use std::{
     io,
     path::{Path, PathBuf},
-    thread,
     time::Instant,
 };
 
@@ -47,7 +46,6 @@ fn search_dir(
     include_patterns: &[glob::Pattern],
     max_depth: usize,
 ) -> impl ParallelIterator<Item = App> {
-    use crate::{app::apps::AppCommand, commands::Function};
     use walkdir::WalkDir;
 
     WalkDir::new(path.as_ref())
@@ -90,13 +88,13 @@ fn search_dir(
             #[cfg(not(target_os = "windows"))]
             let icon = None;
 
-            Some(App {
-                open_command: AppCommand::Function(Function::OpenApp(path.to_path_buf())),
-                name: name.clone(),
-                name_lc: name.to_lowercase(),
-                icons: icon,
-                desc: "Application".to_string(),
-            })
+            Some(App::new_executable(
+                &name,
+                &name.to_lowercase(),
+                "Application",
+                path,
+                None,
+            ))
         })
 }
 
@@ -117,30 +115,31 @@ pub fn read_config_file(file_path: &Path) -> anyhow::Result<Config> {
     }
 }
 
-pub fn open_application(path: PathBuf) {
-    thread::spawn(move || {
-        #[cfg(target_os = "windows")]
-        {
-            println!("Opening application: {}", &path.display());
+// TODO: this should also work with args
+pub fn open_application(path: impl AsRef<Path>) {
+    let path = path.as_ref();
 
-            Command::new("powershell")
-                .arg(format!("Start-Process '{}'", &path.to_string_lossy()))
-                .status()
-                .ok();
-        }
+    #[cfg(target_os = "windows")]
+    {
+        println!("Opening application: {}", path.display());
 
-        #[cfg(target_os = "macos")]
-        {
-            NSWorkspace::new().openURL(&NSURL::fileURLWithPath(
-                &objc2_foundation::NSString::from_str(&path.to_string_lossy()),
-            ));
-        }
+        Command::new("powershell")
+            .arg(format!("Start-Process '{}'", path.display()))
+            .status()
+            .ok();
+    }
 
-        #[cfg(target_os = "linux")]
-        {
-            Command::new(path).status().ok();
-        }
-    });
+    #[cfg(target_os = "macos")]
+    {
+        NSWorkspace::new().openURL(&NSURL::fileURLWithPath(
+            &objc2_foundation::NSString::from_str(&path.to_string_lossy()),
+        ));
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        Command::new(path).status().ok();
+    }
 }
 
 pub fn index_installed_apps(config: &Config) -> anyhow::Result<Vec<App>> {

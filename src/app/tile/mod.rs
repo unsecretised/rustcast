@@ -68,7 +68,7 @@ impl AppIndex {
     pub fn from_apps(options: Vec<App>) -> Self {
         let mut bmap = BTreeMap::new();
         for app in options {
-            bmap.insert(app.name_lc.clone(), app);
+            bmap.insert(app.alias.clone(), app);
         }
 
         AppIndex { by_name: bmap }

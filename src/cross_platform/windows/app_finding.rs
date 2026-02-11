@@ -59,7 +59,7 @@ pub fn get_apps_from_registry(apps: &mut Vec<App>) {
             let exe = PathBuf::from(exe_path.split(",").next().unwrap());
 
             // make sure it ends with .exe
-            if !exe.ends_with(".exe") {
+            if !exe_string.ends_with(".exe") {
                 return;
             }
 
@@ -136,6 +136,7 @@ pub fn index_start_menu() -> Vec<App> {
                     let target = x.link_target();
 
                     tracing::trace!("Link at {} loaded (target: {:?})", path.display(), &target);
+                    let file_name = path.file_name().to_string_lossy().to_string();
 
                     match target {
                         Some(target) => {
@@ -156,7 +157,7 @@ pub fn index_start_menu() -> Vec<App> {
                         None => {
                             tracing::trace!(
                                 "Link at {} has no target, skipped",
-                                entry.path().to_string_lossy()
+                                path.path().display()
                             );
                             None
                         }
