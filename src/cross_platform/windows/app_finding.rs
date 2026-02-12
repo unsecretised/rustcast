@@ -1,5 +1,8 @@
 use {
-    crate::{app::apps::App, cross_platform::windows::{appicon::get_first_icon, get_acp}},
+    crate::{
+        app::apps::App,
+        cross_platform::windows::{appicon::get_first_icon, get_acp},
+    },
     std::path::PathBuf,
     walkdir::WalkDir,
     windows::{
