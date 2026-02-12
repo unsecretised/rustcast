@@ -19,10 +19,8 @@ use crate::{
     commands::Function,
     icon::iced_img_handle,
     styles::{result_button_style, result_row_container_style},
+    cross_platform::get_img_handle
 };
-
-#[cfg(target_os = "macos")]
-use std::path::PathBuf;
 
 /// This tells each "App" what to do when it is clicked, whether it is a function, a message, or a display
 #[allow(dead_code)]
