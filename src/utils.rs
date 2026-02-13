@@ -62,7 +62,10 @@ fn search_dir(
                 && !include_patterns.iter().any(|x| x.matches_path(path))
             {
                 #[cfg(debug_assertions)]
-                tracing::trace!("Executable skipped [kfolder]: {:?}", path.to_str());
+                tracing::trace!(
+                    target: "dir_app_search",
+                    "App excluded: {:?}", path.to_str()
+                );
 
                 return None;
             }
@@ -71,7 +74,10 @@ fn search_dir(
             let name = file_name.replace(".exe", "");
 
             #[cfg(debug_assertions)]
-            tracing::trace!("Executable loaded  [kfolder]: {:?}", path.to_str());
+            tracing::trace!(
+                target: "dir_app_search",
+                "App added: {:?}", path.to_str()
+            );
 
             Some(App::new_executable(
                 &name,

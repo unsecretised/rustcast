@@ -1,0 +1,13 @@
+#!/usr/bin/make -f
+
+export PATH := $(HOME)/.cargo/bin:$(PATH)
+
+%:
+	dh $@
+
+override_dh_auto_build:
+	cargo build --release --target x86_64-unknown-linux-gnu
+
+override_dh_auto_install:
+	install -d $(CURDIR)/debian/rustcast/usr/bin
+	install -m 755 target/x86_64-unknown-linux-gnu/release/rustcast $(CURDIR)/debian/rustcast/usr/bin/rustcast

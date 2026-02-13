@@ -35,7 +35,11 @@ pub fn get_apps_from_registry(apps: &mut Vec<App>) {
         .flat_map(|reg| reg.enum_keys().zip(std::iter::repeat(reg)))
     {
         // Not debug only just because it doesn't run too often
-        tracing::trace!("App added [reg]: {:?}", key);
+        tracing::trace!(
+                target: "reg_app_search",
+                "App added: {:?}",
+                key
+            );
 
         // https://learn.microsoft.com/en-us/windows/win32/msi/uninstall-registry-key
         let name = key.unwrap();
@@ -123,10 +127,34 @@ pub fn index_start_menu() -> Vec<App> {
                     } else {
                         tracing::debug!("Link at {} has no target, skipped", path.path().display());
                         None
+                    match target {
+                        Some(target) => {
+                            tracing::trace!(
+                                target: "smenu_app_search",
+                                "Link at {} added",
+                                path.path().display()
+                            );
+                            Some(App::new_executable(
+                                &file_name,
+                                &file_name,
+                                "",
+                                PathBuf::from(target.clone()),
+                                None,
+                            ))
+                        },
+                        None => {
+                            tracing::trace!(
+                                target: "smenu_app_search",
+                                "Link at {} has no target, skipped",
+                                path.path().display()
+                            );
+                            None
+                        }
                     }
                 }
                 Err(e) => {
-                    tracing::debug!(
+                    tracing::trace!(
+                        target: "smenu_app_search",
                         "Error opening link {} ({e}), skipped",
                         path.path().to_string_lossy()
                     );
