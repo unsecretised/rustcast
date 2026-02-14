@@ -128,7 +128,7 @@ pub fn index_start_menu() -> Vec<App> {
                                 PathBuf::from(target.clone()),
                                 None,
                             ))
-                        },
+                        }
                         None => {
                             tracing::trace!(
                                 target: "smenu_app_search",

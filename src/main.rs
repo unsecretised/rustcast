@@ -118,9 +118,14 @@ fn main() -> iced::Result {
 
     #[cfg(not(target_os = "linux"))]
     let show_hide_bind = {
+        use global_hotkey::hotkey::{Code, HotKey, Modifiers};
+
         let manager = GlobalHotKeyManager::new().unwrap();
 
-        let show_hide = config.toggle_hotkey.parse().unwrap();
+        let show_hide = config
+            .toggle_hotkey
+            .parse()
+            .unwrap_or(HotKey::new(Some(Modifiers::ALT), Code::Space));
 
         let mut hotkeys = vec![show_hide];
 
