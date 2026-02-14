@@ -49,8 +49,8 @@ pub enum BinOp {
 
 impl Expr {
     pub fn eval(&self) -> Option<f64> {
-        use BinOp::*;
-        use UnaryOp::*;
+        use BinOp::{Add, Div, Mul, Pow, Sub};
+        use UnaryOp::{Minus, Plus};
         match self {
             Expr::Number(x) => Some(*x),
 
@@ -101,7 +101,7 @@ impl Expr {
     pub fn from_str(s: &str) -> Result<Expr, String> {
         let mut p = Parser::new(s);
         let expr = p.parse_expr()?;
-        p.expect(Token::End)?;
+        p.expect(&Token::End)?;
         Ok(expr)
     }
 }
@@ -151,9 +151,8 @@ impl<'a> Lexer<'a> {
 
     fn next_token(&mut self) -> Result<Token, String> {
         self.skip_ws();
-        let c = match self.peek_char() {
-            Some(c) => c,
-            None => return Ok(Token::End),
+        let Some(c) = self.peek_char() else {
+            return Ok(Token::End);
         };
 
         // single-char tokens
@@ -195,10 +194,9 @@ impl<'a> Lexer<'a> {
                 if c.is_ascii_digit() || c == '.' {
                     return self.lex_number();
                 } else if c.is_ascii_alphabetic() || c == '_' {
-                    return self.lex_ident();
-                } else {
-                    return Err(format!("Unexpected character: {c}"));
+                    return Ok(self.lex_ident());
                 }
+                return Err(format!("Unexpected character: {c}"));
             }
         };
         Ok(tok)
@@ -233,7 +231,7 @@ impl<'a> Lexer<'a> {
         Ok(Token::Number(n))
     }
 
-    fn lex_ident(&mut self) -> Result<Token, String> {
+    fn lex_ident(&mut self) -> Token {
         let start = self.i;
         while let Some(c) = self.peek_char() {
             if c.is_ascii_alphanumeric() || c == '_' {
@@ -242,7 +240,7 @@ impl<'a> Lexer<'a> {
                 break;
             }
         }
-        Ok(Token::Ident(self.input[start..self.i].to_string()))
+        Token::Ident(self.input[start..self.i].to_string())
     }
 }
 
@@ -265,8 +263,8 @@ impl<'a> Parser<'a> {
         Ok(())
     }
 
-    fn expect(&mut self, t: Token) -> Result<(), String> {
-        if self.cur == t {
+    fn expect(&mut self, t: &Token) -> Result<(), String> {
+        if self.cur == *t {
             self.bump()
         } else {
             Err(format!("Expected {:?}, found {:?}", t, self.cur))
@@ -360,14 +358,14 @@ impl<'a> Parser<'a> {
             Token::LParen => {
                 self.bump()?;
                 let e = self.parse_expr()?;
-                self.expect(Token::RParen)?;
+                self.expect(&Token::RParen)?;
                 Ok(e)
             }
             Token::Ident(name) => {
                 let name = name.clone();
                 self.bump()?;
                 // function call must be ident '(' ...
-                self.expect(Token::LParen)?;
+                self.expect(&Token::LParen)?;
                 let mut args = Vec::new();
                 if self.cur != Token::RParen {
                     loop {
@@ -379,7 +377,7 @@ impl<'a> Parser<'a> {
                         break;
                     }
                 }
-                self.expect(Token::RParen)?;
+                self.expect(&Token::RParen)?;
                 Ok(Expr::Func { name, args })
             }
             _ => Err(format!("Unexpected token: {:?}", self.cur)),

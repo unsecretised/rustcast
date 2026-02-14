@@ -1,4 +1,5 @@
 mod app;
+mod app_finding;
 mod calculator;
 mod clipboard;
 mod commands;
@@ -27,6 +28,7 @@ use tracing_subscriber::layer::SubscriberExt;
 #[cfg(target_os = "linux")]
 const SOCKET_PATH: &str = "/tmp/rustcast.sock";
 
+#[allow(clippy::too_many_lines)] // Not reasonably splittable without being less readable
 fn main() -> iced::Result {
     #[cfg(target_os = "macos")]
     cross_platform::macos::set_activation_policy_accessory();
@@ -37,11 +39,11 @@ fn main() -> iced::Result {
             let result = create_dir_all(config_dir.join("rustcast/"));
 
             if let Err(e) = result {
-                eprintln!("{}", e);
+                eprintln!("{e}");
                 std::process::exit(1);
             }
         } else {
-            eprintln!("{}", e);
+            eprintln!("{e}");
             std::process::exit(1);
         }
     }
@@ -50,7 +52,7 @@ fn main() -> iced::Result {
     let config = read_config_file(&file_path);
     if let Err(e) = config {
         // Tracing isn't inited yet
-        eprintln!("Error parsing config: {}", e);
+        eprintln!("Error parsing config: {e}");
         std::process::exit(1);
     }
 
@@ -118,14 +120,16 @@ fn main() -> iced::Result {
 
     #[cfg(not(target_os = "linux"))]
     let show_hide_bind = {
+        use global_hotkey::hotkey::HotKey;
+
         let manager = GlobalHotKeyManager::new().unwrap();
 
         let show_hide = config.toggle_hotkey.parse().unwrap();
 
-        let mut hotkeys = vec![show_hide];
+        let mut hotkeys: Vec<HotKey> = vec![show_hide];
 
         if let Some(show_clipboard) = &config.clipboard_hotkey
-            && let Some(cb_page_hk) = show_clipboard.parse().ok()
+            && let Ok(cb_page_hk) = show_clipboard.parse()
         {
             hotkeys.push(cb_page_hk);
         }
@@ -135,9 +139,9 @@ fn main() -> iced::Result {
         if let Err(global_hotkey::Error::AlreadyRegistered(key)) = result {
             if key == show_hide {
                 // It probably should give up here.
-                panic!("Couldn't register the key to open ({})", key)
+                panic!("Couldn't register the key to open ({key})")
             } else {
-                tracing::warn!("Couldn't register hotkey {}", key)
+                tracing::warn!("Couldn't register hotkey {}", key);
             }
         } else if let Err(e) = result {
             tracing::error!("{}", e.to_string());

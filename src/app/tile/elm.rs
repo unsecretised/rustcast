@@ -13,15 +13,13 @@ use iced::{Length::Fill, widget::text_input};
 
 use rayon::slice::ParallelSliceMut;
 
-#[cfg(target_os = "windows")]
-use crate::app;
 use crate::app::WINDOW_WIDTH;
 use crate::app::pages::clipboard::clipboard_view;
 use crate::app::pages::emoji::emoji_page;
 use crate::app::tile::AppIndex;
+use crate::app_finding::index_installed_apps;
 use crate::config::Theme;
 use crate::styles::{contents_style, rustcast_text_input_style, tint, with_alpha};
-use crate::utils::index_installed_apps;
 use crate::{
     app::{Message, Page, apps::App, default_settings, tile::Tile},
     config::Config,
@@ -77,7 +75,7 @@ pub fn new(
     config: &Config,
 ) -> (Tile, Task<Message>) {
     tracing::trace!(target: "elm_init", "Initing ELM");
-    
+
     #[allow(unused_mut)]
     let mut settings = default_settings();
 
@@ -92,7 +90,7 @@ pub fn new(
     }
 
     tracing::trace!(target: "elm_init", "Opening window");
-    
+
     // id unused on windows, but not macos
     #[allow(unused)]
     let (id, open) = window::open(settings);
@@ -115,13 +113,13 @@ pub fn new(
     let options = index_installed_apps(config);
 
     if let Err(ref e) = options {
-        tracing::error!("Error indexing apps: {e}")
+        tracing::error!("Error indexing apps: {e}");
     }
 
     // Still try to load the rest
     let mut options = options.unwrap_or_default();
 
-    options.extend(config.shells.iter().map(|x| x.to_app()));
+    options.extend(config.shells.iter().map(crate::config::Shelly::to_app));
     options.extend(App::basic_apps());
     options.par_sort_by_key(|x| x.name.len());
     let options = AppIndex::from_apps(options);
@@ -137,7 +135,7 @@ pub fn new(
             visible: true,
             focused: false,
             config: config.clone(),
-            theme: config.theme.to_owned().into(),
+            theme: config.theme.clone().into(),
             clipboard_content: vec![],
             tray_icon: None,
             sender: None,
@@ -160,7 +158,7 @@ pub fn new(
             clipboard_hotkey: config
                 .clipboard_hotkey
                 .clone()
-                .and_then(|x| x.parse::<HotKey>().ok()),
+                .and_then(|x: String| x.parse().ok()),
         },
         open,
     )
@@ -196,36 +194,39 @@ pub fn view(tile: &Tile, wid: window::Id) -> Element<'_, Message> {
 
         let results = if tile.page == Page::ClipboardHistory {
             clipboard_view(
-                tile.clipboard_content.clone(),
+                &tile.clipboard_content,
                 tile.focus_id,
-                tile.config.theme.clone(),
+                &tile.config.theme,
                 tile.focus_id,
             )
         } else if tile.results.is_empty() {
             space().into()
         } else if tile.page == Page::EmojiSearch {
-            emoji_page(
-                tile.config.theme.clone(),
-                tile.emoji_apps
-                    .search_prefix(&tile.query_lc)
-                    .map(|x| x.to_owned())
-                    .collect(),
-                tile.focus_id,
-            )
+            let results: Vec<_> = tile
+                .emoji_apps
+                .search_prefix(&tile.query_lc)
+                .map(std::borrow::ToOwned::to_owned)
+                .collect();
+
+            emoji_page(tile.config.theme.clone(), &results, tile.focus_id)
         } else {
-            container(Column::from_iter(tile.results.iter().enumerate().map(
-                |(i, app)| {
-                    app.clone()
-                        .render(tile.config.theme.clone(), i as u32, tile.focus_id)
-                },
-            )))
+            container(
+                tile.results
+                    .iter()
+                    .enumerate()
+                    .map(|(i, app)| {
+                        #[allow(clippy::cast_possible_truncation)]
+                        app.clone()
+                            .render(tile.config.theme.clone(), i as u32, tile.focus_id)
+                    })
+                    .collect::<Column<_>>(),
+            )
             .into()
         };
 
         let results_count = match &tile.page {
-            Page::Main => tile.results.len(),
             Page::ClipboardHistory => tile.clipboard_content.len(),
-            Page::EmojiSearch => tile.results.len(),
+            Page::Main | Page::EmojiSearch => tile.results.len(),
         };
 
         let height = if tile.page == Page::ClipboardHistory {
@@ -234,6 +235,7 @@ pub fn view(tile: &Tile, wid: window::Id) -> Element<'_, Message> {
             std::cmp::min(tile.results.len() * 60, 290)
         };
 
+        #[allow(clippy::cast_possible_truncation)]
         let scrollable = Scrollable::with_direction(results, scrollbar_direction)
             .id("results")
             .height(height as u32);
@@ -278,7 +280,7 @@ fn footer(theme: Theme, results_count: usize) -> Element<'static, Message> {
     } else if results_count == 1 {
         "1 result found"
     } else {
-        &format!("{} results found", results_count)
+        &format!("{results_count} results found")
     };
 
     container(

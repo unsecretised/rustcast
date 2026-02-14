@@ -6,9 +6,9 @@ use iced::widget::{
 use crate::{app::pages::prelude::*, clipboard::ClipBoardContentType};
 
 pub fn clipboard_view(
-    clipboard_content: Vec<ClipBoardContentType>,
+    clipboard_content: &[ClipBoardContentType],
     focussed_id: u32,
-    theme: Theme,
+    theme: &Theme,
     focus_id: u32,
 ) -> Element<'static, Message> {
     let theme_clone = theme.clone();
@@ -16,10 +16,16 @@ pub fn clipboard_view(
     container(Row::from_vec(vec![
         container(
             scrollable(
-                Column::from_iter(clipboard_content.iter().enumerate().map(|(i, content)| {
-                    content.to_app().render(theme.clone(), i as u32, focus_id)
-                }))
-                .width(WINDOW_WIDTH / 3.),
+                clipboard_content
+                    .iter()
+                    .enumerate()
+                    .map(|(i, content)| {
+                        // I'd be surprised if you get 4 billion entries
+                        #[allow(clippy::cast_possible_truncation)]
+                        content.to_app().render(theme.clone(), i as u32, focus_id)
+                    })
+                    .collect::<Column<_>>()
+                    .width(WINDOW_WIDTH / 3.),
             )
             .id("results"),
         )
@@ -31,7 +37,7 @@ pub fn clipboard_view(
                 clipboard_content
                     .get(focussed_id as usize)
                     .map(|x| x.to_app().alias)
-                    .unwrap_or("".to_string()),
+                    .unwrap_or_default(),
             )
             .height(385)
             .width(Length::Fill)

@@ -4,12 +4,12 @@ use crate::{app::pages::prelude::*, clipboard::ClipBoardContentType, commands::F
 
 pub fn emoji_page(
     tile_theme: Theme,
-    emojis: Vec<App>,
+    emojis: &[App],
     focussed_id: u32,
 ) -> Element<'static, Message> {
     let emoji_vec = emojis
         .chunks(6)
-        .map(|x| x.to_vec())
+        .map(<[App]>::to_vec)
         .collect::<Vec<Vec<App>>>();
 
     let mut column = Vec::new();
@@ -43,7 +43,7 @@ pub fn emoji_page(
                 )
                 .width(70)
                 .height(70)
-                .id(format!("result-{}", id_num))
+                .id(format!("result-{id_num}"))
                 .style(move |_| emoji_button_container_style(&theme_clone, focussed_id == id_num)),
                 container(
                     Text::new(emoji.desc)

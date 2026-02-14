@@ -32,7 +32,7 @@ impl ClipBoardContentType {
             &name,
             &name_lc,
             "Clipboard Item",
-            AppCommand::Function(Function::CopyToClipboard(self_clone.to_owned())),
+            AppCommand::Function(Function::CopyToClipboard(self_clone.clone())),
         )
     }
 }

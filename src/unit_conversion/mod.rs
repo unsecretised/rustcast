@@ -136,7 +136,7 @@ fn parse_number_prefix(s: &str) -> Option<(&str, &str)> {
 
     let mut end = 0;
     let mut has_digit = false;
-    while let Some((idx, c)) = chars.peek().cloned() {
+    while let Some((idx, c)) = chars.peek().copied() {
         if c.is_ascii_digit() {
             has_digit = true;
             end = idx + c.len_utf8();
