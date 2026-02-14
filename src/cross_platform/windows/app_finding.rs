@@ -2,10 +2,7 @@ use {
     crate::{
         app::apps::App,
         cross_platform::windows::{appicon::get_first_icon, get_acp},
-    },
-    std::path::PathBuf,
-    walkdir::WalkDir,
-    windows::{
+    }, lnk::ShellLink, std::path::{Path, PathBuf}, walkdir::WalkDir, windows::{
         Win32::{
             System::Com::CoTaskMemFree,
             UI::Shell::{
@@ -14,7 +11,7 @@ use {
             },
         },
         core::GUID,
-    },
+    }
 };
 
 /// Loads apps from the registry keys `SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall` and
@@ -110,6 +107,45 @@ fn get_windows_path(folder_id: &GUID) -> Option<PathBuf> {
     }
 }
 
+fn parse_link(lnk: ShellLink, link_path: impl AsRef<Path>) -> Option<App> {
+    let link_path = link_path.as_ref();
+
+    let Some(target) = lnk.link_target() else {
+        tracing::trace!(
+            target: "smenu_app_search",
+            "Link at {} has no target, skipped",
+            link_path.display()
+        );
+        return None;
+    };
+    let target = PathBuf::from(target);
+
+    tracing::trace!("Link at {} loaded (target: {:?})", link_path.display(), &target);
+
+    let Some(file_name) = target.file_name() else {
+        tracing::trace!(
+            target: "smenu_app_search",
+            "Link at {} skipped (not pointing to a directory)",
+            link_path.display()
+        );
+        return None;
+    };
+
+    tracing::trace!(
+        target: "smenu_app_search",
+        "Link at {} added",
+        link_path.display()
+    );
+
+    Some(App::new_executable(
+        &file_name.to_string_lossy(),
+        &file_name.to_string_lossy(),
+        "",
+        target.clone(),
+        None,
+    ))
+}
+
 pub fn index_start_menu() -> Vec<App> {
     WalkDir::new(r"C:\ProgramData\Microsoft\Windows\Start Menu\Programs")
         .into_iter()
@@ -133,36 +169,7 @@ pub fn index_start_menu() -> Vec<App> {
             let lnk = lnk::ShellLink::open(path, get_acp());
 
             match lnk {
-                Ok(x) => {
-                    let target = x.link_target();
-
-                    tracing::trace!("Link at {} loaded (target: {:?})", path.display(), &target);
-
-                    match target {
-                        Some(target) => {
-                            tracing::trace!(
-                                target: "smenu_app_search",
-                                "Link at {} added",
-                                path.path().display()
-                            );
-                            Some(App::new_executable(
-                                &file_name,
-                                &file_name,
-                                "",
-                                PathBuf::from(target.clone()),
-                                None,
-                            ))
-                        },
-                        None => {
-                            tracing::trace!(
-                                target: "smenu_app_search",
-                                "Link at {} has no target, skipped",
-                                path.path().display()
-                            );
-                            None
-                        }
-                    }
-                }
+                Ok(x) => parse_link(x, path),
                 Err(e) => {
                     tracing::trace!(
                         target: "smenu_app_search",

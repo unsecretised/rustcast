@@ -154,7 +154,7 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
         Message::OpenFocused => match tile
             .results
             .get(tile.focus_id as usize)
-            .map(|x| &x.app_data)
+            .map(|x| &x.data)
         {
             Some(AppData::Builtin {
                 command: AppCommand::Function(func),
