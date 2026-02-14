@@ -139,8 +139,8 @@ fn parse_link(lnk: ShellLink, link_path: impl AsRef<Path>) -> Option<App> {
 
     Some(App::new_executable(
         &file_name.to_string_lossy(),
-        &file_name.to_string_lossy(),
-        "",
+        &file_name.to_string_lossy().to_lowercase(),
+        "Shortcut",
         target.clone(),
         None,
     ))
