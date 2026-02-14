@@ -70,18 +70,6 @@ pub fn get_apps_from_registry(apps: &mut Vec<App>) {
     }
 }
 
-/// Returns the set of known paths
-pub fn get_known_paths() -> Vec<PathBuf> {
-    let paths = vec![
-        get_windows_path(&FOLDERID_ProgramFiles).unwrap_or_default(),
-        get_windows_path(&FOLDERID_ProgramFilesX86).unwrap_or_default(),
-        (get_windows_path(&FOLDERID_LocalAppData)
-            .unwrap_or_default()
-            .join("Programs")),
-    ];
-    paths
-}
-
 /// Wrapper around `SHGetKnownFolderPath` to get paths to known folders
 fn get_windows_path(folder_id: &GUID) -> Option<PathBuf> {
     unsafe {
@@ -132,4 +120,16 @@ pub fn index_start_menu() -> Vec<App> {
             }
         })
         .collect()
+}
+
+/// Returns the set of known paths
+pub fn get_known_paths() -> Vec<PathBuf> {
+    let paths = vec![
+        get_windows_path(&FOLDERID_ProgramFiles).unwrap_or_default(),
+        get_windows_path(&FOLDERID_ProgramFilesX86).unwrap_or_default(),
+        (get_windows_path(&FOLDERID_LocalAppData)
+            .unwrap_or_default()
+            .join("Programs")),
+    ];
+    paths
 }

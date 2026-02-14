@@ -13,15 +13,13 @@ use iced::{Length::Fill, widget::text_input};
 
 use rayon::slice::ParallelSliceMut;
 
-#[cfg(target_os = "windows")]
-use crate::app;
 use crate::app::WINDOW_WIDTH;
 use crate::app::pages::clipboard::clipboard_view;
 use crate::app::pages::emoji::emoji_page;
 use crate::app::tile::AppIndex;
 use crate::config::Theme;
 use crate::styles::{contents_style, rustcast_text_input_style, tint, with_alpha};
-use crate::utils::index_installed_apps;
+use crate::app_finding::index_installed_apps;
 use crate::{
     app::{Message, Page, apps::App, default_settings, tile::Tile},
     config::Config,
@@ -160,7 +158,7 @@ pub fn new(
             clipboard_hotkey: config
                 .clipboard_hotkey
                 .clone()
-                .and_then(|x| x.parse::<HotKey>().ok()),
+                .and_then(|x: String| x.parse().ok()),
         },
         open,
     )

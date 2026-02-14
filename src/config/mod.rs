@@ -4,8 +4,9 @@ use std::{path::PathBuf, sync::Arc};
 use iced::{Font, font::Family, theme::Custom};
 use serde::{Deserialize, Serialize};
 
-#[cfg(target_os = "windows")]
-use crate::cross_platform::windows::app_finding::get_known_paths;
+#[cfg(target_os="windows")]
+use crate::app_finding::get_known_paths;
+
 use crate::{
     app::apps::{App, AppData},
     cross_platform::get_img_handle,

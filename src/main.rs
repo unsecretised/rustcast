@@ -120,14 +120,16 @@ fn main() -> iced::Result {
 
     #[cfg(not(target_os = "linux"))]
     let show_hide_bind = {
+        use global_hotkey::hotkey::HotKey;
+
         let manager = GlobalHotKeyManager::new().unwrap();
 
         let show_hide = config.toggle_hotkey.parse().unwrap();
 
-        let mut hotkeys = vec![show_hide];
+        let mut hotkeys: Vec<HotKey> = vec![show_hide];
 
         if let Some(show_clipboard) = &config.clipboard_hotkey
-            && let Some(cb_page_hk) = show_clipboard.parse().ok()
+            && let Ok(cb_page_hk) = show_clipboard.parse()
         {
             hotkeys.push(cb_page_hk);
         }

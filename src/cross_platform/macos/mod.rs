@@ -3,12 +3,7 @@
 
 pub mod haptics;
 
-use crate::app::apps::{App, AppCommand};
-use crate::commands::Function;
-use crate::config::Config;
-use crate::utils::index_installed_apps;
 use icns::IconFamily;
-use rayon::iter::ParallelExtend;
 use {
     iced::wgpu::rwh::RawWindowHandle,
     iced::wgpu::rwh::WindowHandle,
@@ -22,10 +17,8 @@ use {
 };
 
 use objc2_app_kit::NSWorkspace;
-use rayon::iter::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
-use std::path::{Path, PathBuf};
-use std::process::exit;
-use std::{fs, thread};
+use std::path::Path;
+use std::thread;
 
 /// This sets the activation policy of the app to Accessory, allowing rustcast to be visible ontop
 /// of fullscreen apps
