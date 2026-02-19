@@ -54,37 +54,36 @@ pub fn get_apps_from_registry(apps: &mut Vec<App>) {
         // let publisher = key.get_value("Publisher").unwrap_or(OsString::new());
         // let version = key.get_value("DisplayVersion").unwrap_or(OsString::new());
 
-            // Trick, I saw on internet to point to the exe location..
-            let exe_path: OsString = key.get_value("DisplayIcon").unwrap_or_default();
-            if exe_path.is_empty() {
-                return;
-            }
-            // if there is something, it will be in the form of
-            // "C:\Program Files\Microsoft Office\Office16\WINWORD.EXE",0
-            let exe_path = exe_path.to_string_lossy().to_string();
-            let exe = PathBuf::from(exe_path.split(",").next().unwrap());
+        // Trick, I saw on internet to point to the exe location..
+        let exe_path: OsString = key.get_value("DisplayIcon").unwrap_or_default();
+        if exe_path.is_empty() {
+            return;
+        }
+        // if there is something, it will be in the form of
+        // "C:\Program Files\Microsoft Office\Office16\WINWORD.EXE",0
+        let exe_path = exe_path.to_string_lossy().to_string();
+        let exe = PathBuf::from(exe_path.split(",").next().unwrap());
 
-            // make sure it ends with .exe
-            if exe.extension() != Some(&OsString::from("exe")) {
-                return;
-            }
+        // make sure it ends with .exe
+        if exe.extension() != Some(&OsString::from("exe")) {
+            return;
+        }
 
-            if !display_name.is_empty() {
-                let icon = get_first_icon(&exe)
-                    .inspect_err(|e| tracing::error!("Error getting icons: {e}"))
-                    .ok()
-                    .flatten();
+        if !display_name.is_empty() {
+            let icon = get_first_icon(&exe)
+                .inspect_err(|e| tracing::error!("Error getting icons: {e}"))
+                .ok()
+                .flatten();
 
-                apps.push(App::new_executable(
-                    &display_name.clone().to_string_lossy(),
-                    &display_name.clone().to_string_lossy().to_lowercase(),
-                    "Application",
-                    exe,
-                    icon,
-                ))
-            }
-        });
-    });
+            apps.push(App::new_executable(
+                &display_name.clone().to_string_lossy(),
+                &display_name.clone().to_string_lossy().to_lowercase(),
+                "Application",
+                exe,
+                icon,
+            ))
+        }
+    }
 }
 
 /// Returns the set of known paths
