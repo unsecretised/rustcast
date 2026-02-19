@@ -27,7 +27,7 @@ pub fn menu_icon(#[cfg(not(target_os = "linux"))] hotkey: HotKey, sender: ExtSen
 
     let menu = Menu::with_items(&[
         &version_item(),
-        &about_item(image),
+        &about_item(&image),
         &open_github_item(),
         &PredefinedMenuItem::separator(),
         &refresh_item(),
@@ -97,7 +97,7 @@ fn init_event_handler(sender: ExtSender) {
             }
             "open_issue_page" => {
                 if let Err(e) = open::that("https://github.com/unsecretised/rustcast/issues/new") {
-                    tracing::error!("Error opening url: {}", e)
+                    tracing::error!("Error opening url: {}", e);
                 }
             }
             "show_rustcast" => {
@@ -112,7 +112,7 @@ fn init_event_handler(sender: ExtSender) {
                 if let Err(e) = open::that(
                     "https://github.com/unsecretised/rustcast/discussions/new?category=q-a",
                 ) {
-                    tracing::error!("Error opening url: {}", e)
+                    tracing::error!("Error opening url: {}", e);
                 }
             }
             "open_preferences" => {
@@ -120,7 +120,7 @@ fn init_event_handler(sender: ExtSender) {
             }
             "open_github_page" => {
                 if let Err(e) = open::that("https://github.com/unsecretised/rustcast") {
-                    tracing::error!("Error opening url: {}", e)
+                    tracing::error!("Error opening url: {}", e);
                 }
             }
             _ => {}
@@ -196,7 +196,7 @@ fn quit_item() -> PredefinedMenuItem {
     PredefinedMenuItem::quit(Some("Quit"))
 }
 
-fn about_item(image: DynamicImage) -> PredefinedMenuItem {
+fn about_item(image: &DynamicImage) -> PredefinedMenuItem {
     let about_metadata_builder = AboutMetadataBuilder::new()
         .name(Some("RustCast"))
         .version(Some(

@@ -167,8 +167,8 @@ impl Theme {
 
 /// The rules for the buffer AKA search results
 ///
-/// - clear_on_hide is whether the buffer should be cleared when the window is hidden
-/// - clear_on_enter is whether the buffer should be cleared when the user presses enter after
+/// - `clear_on_hide` is whether the buffer should be cleared when the window is hidden
+/// - `clear_on_enter` is whether the buffer should be cleared when the user presses enter after
 ///   searching
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(default)]
@@ -187,7 +187,7 @@ impl Default for Buffer {
 }
 
 /// Command is the command it will run when the button is clicked
-/// Icon_path is the path to an icon, but this is optional
+/// `Icon_path` is the path to an icon, but this is optional
 /// Alias is the text that is used to call this command / search for it
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Shelly {
@@ -202,7 +202,7 @@ impl Shelly {
     pub fn to_app(&self) -> App {
         let self_clone = self.clone();
         let icon = self_clone.icon_path.map(|x| {
-            let x = x.replace("~", &std::env::var("HOME").unwrap());
+            let x = x.replace('~', &std::env::var("HOME").unwrap());
             get_img_handle(&PathBuf::from(x))
         });
         App::new(

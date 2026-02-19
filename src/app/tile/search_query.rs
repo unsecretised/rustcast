@@ -7,7 +7,7 @@ use std::cmp;
 use super::Tile;
 use crate::{
     app::{
-        ArrowKey, DEFAULT_WINDOW_HEIGHT, Message, Page, RUSTCAST_DESC_NAME, WINDOW_WIDTH,
+        ArrowKey, DEFAULT_WINDOW_HEIGHT, Message, Page, WINDOW_WIDTH,
         apps::{App, AppCommand},
     },
     calculator::Expr,
@@ -19,6 +19,7 @@ use crate::{
 #[cfg(target_os = "macos")]
 use crate::cross_platform::macos::haptics::{HapticPattern, perform_haptic};
 
+#[allow(clippy::too_many_lines)]
 pub(super) fn handle_change(tile: &mut Tile, input: &str, id: Id) -> iced::Task<Message> {
     tile.focus_id = 0;
     #[cfg(target_os = "macos")]
@@ -53,49 +54,48 @@ pub(super) fn handle_change(tile: &mut Tile, input: &str, id: Id) -> iced::Task<
                 height: 55. + DEFAULT_WINDOW_HEIGHT,
             },
         );
-    } else {
-        if tile.query_lc == "67" {
-            tile.results = vec![App::new_builtin(
-                "67",
-                "",
-                "Easter egg",
-                AppCommand::Function(Function::RandomVar(67)),
-            )];
-            return window::resize(
-                id,
-                iced::Size {
-                    width: WINDOW_WIDTH,
-                    height: 55. + DEFAULT_WINDOW_HEIGHT,
-                },
-            );
-        }
-        if tile.query_lc.ends_with("?") {
-            tile.results = vec![App::new_builtin(
-                &format!("Search for: {}", tile.query),
-                "",
-                "Web Search",
-                AppCommand::Function(Function::GoogleSearch(tile.query.clone())),
-            )];
-            return window::resize(
-                id,
-                iced::Size::new(WINDOW_WIDTH, 55. + DEFAULT_WINDOW_HEIGHT),
-            );
-        } else if tile.query_lc == "cbhist" {
-            tile.page = Page::ClipboardHistory
-        } else if tile.query_lc == "main" {
-            tile.page = Page::Main
-        }
+    }
+    if tile.query_lc == "67" {
+        tile.results = vec![App::new_builtin(
+            "67",
+            "",
+            "Easter egg",
+            AppCommand::Function(Function::RandomVar(67)),
+        )];
+        return window::resize(
+            id,
+            iced::Size {
+                width: WINDOW_WIDTH,
+                height: 55. + DEFAULT_WINDOW_HEIGHT,
+            },
+        );
+    }
+    if tile.query_lc.ends_with('?') {
+        tile.results = vec![App::new_builtin(
+            &format!("Search for: {}", tile.query),
+            "",
+            "Web Search",
+            AppCommand::Function(Function::GoogleSearch(tile.query.clone())),
+        )];
+        return window::resize(
+            id,
+            iced::Size::new(WINDOW_WIDTH, 55. + DEFAULT_WINDOW_HEIGHT),
+        );
+    } else if tile.query_lc == "cbhist" {
+        tile.page = Page::ClipboardHistory;
+    } else if tile.query_lc == "main" {
+        tile.page = Page::Main;
     }
     tile.handle_search_query_changed();
 
     if tile.results.is_empty()
         && let Some(res) = Expr::from_str(&tile.query).ok()
     {
-        let res_string = res.eval().map(|x| x.to_string()).unwrap_or(String::new());
+        let res_string = res.eval().map_or(String::new(), |x| x.to_string());
         tile.results.push(App::new_builtin(
-            RUSTCAST_DESC_NAME,
             &res_string,
             "",
+            "Calculation result",
             AppCommand::Function(Function::Calculate(res.clone())),
         ));
     } else if tile.results.is_empty()
@@ -155,7 +155,7 @@ pub(super) fn handle_change(tile: &mut Tile, input: &str, id: Id) -> iced::Task<
         tile.results = tile
             .emoji_apps
             .search_prefix("")
-            .map(|x| x.to_owned())
+            .map(std::borrow::ToOwned::to_owned)
             .collect();
     }
 
@@ -163,6 +163,11 @@ pub(super) fn handle_change(tile: &mut Tile, input: &str, id: Id) -> iced::Task<
     let max_elem = cmp::min(5, new_length);
 
     if prev_size != new_length && tile.page != Page::ClipboardHistory {
+        #[allow(
+            clippy::cast_precision_loss,
+            clippy::cast_possible_truncation,
+            clippy::cast_sign_loss
+        )]
         Task::batch([
             window::resize(
                 id,
@@ -174,6 +179,11 @@ pub(super) fn handle_change(tile: &mut Tile, input: &str, id: Id) -> iced::Task<
             Task::done(Message::ChangeFocus(ArrowKey::Left)),
         ])
     } else if tile.page == Page::ClipboardHistory {
+        #[allow(
+            clippy::cast_precision_loss,
+            clippy::cast_possible_truncation,
+            clippy::cast_sign_loss
+        )]
         Task::batch([
             window::resize(
                 id,

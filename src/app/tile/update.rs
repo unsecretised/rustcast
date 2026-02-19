@@ -21,6 +21,7 @@ use crate::commands::Function;
 use crate::config::Config;
 use crate::utils::index_installed_apps;
 
+#[allow(clippy::too_many_lines)]
 pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
     tracing::trace!(target: "update", "{:?}", message);
 
@@ -95,10 +96,12 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
         }
 
         Message::ChangeFocus(key) => {
+            #[allow(clippy::cast_possible_truncation)]
+            // No, there won't be more than 2^32-1 items in a list
             let len = match tile.page {
                 Page::ClipboardHistory => tile.clipboard_content.len() as u32,
                 Page::EmojiSearch => tile.emoji_apps.search_prefix(&tile.query_lc).count() as u32, // or tile.results.len()
-                _ => tile.results.len() as u32,
+                Page::Main => tile.results.len() as u32,
             };
 
             let old_focus_id = tile.focus_id;
@@ -139,6 +142,7 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
                 Page::EmojiSearch => 5.,
             };
 
+            #[allow(clippy::cast_precision_loss)]
             Task::batch([
                 task,
                 operation::scroll_to(
@@ -170,10 +174,9 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
         Message::ReloadConfig => {
             let new_config: Config = match toml::from_str(
                 &fs::read_to_string(
-                    std::env::var("HOME").unwrap_or("".to_owned())
-                        + "/.config/rustcast/config.toml",
+                    std::env::var("HOME").unwrap_or_default() + "/.config/rustcast/config.toml",
                 )
-                .unwrap_or("".to_owned()),
+                .unwrap_or_default(),
             ) {
                 Ok(a) => a,
                 Err(_) => return Task::none(),
@@ -185,11 +188,11 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
                 Err(e) => tracing::error!("Error indexing apps: {e}"),
             }
 
-            options.extend(new_config.shells.iter().map(|x| x.to_app()));
+            options.extend(new_config.shells.iter().map(crate::config::Shelly::to_app));
             options.extend(App::basic_apps());
             options.par_sort_by_key(|x| x.name.len());
 
-            tile.theme = new_config.theme.to_owned().into();
+            tile.theme = new_config.theme.clone().into();
             tile.config = new_config;
             tile.options = AppIndex::from_apps(options);
             Task::none()
@@ -223,8 +226,7 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
             // Linux Clipboard and Open Hotkey are gonna be handled via a socket
             let is_clipboard_hotkey = tile
                 .clipboard_hotkey
-                .map(|hotkey| hotkey.id == hk_id)
-                .unwrap_or(false);
+                .is_some_and(|hotkey| hotkey.id == hk_id);
 
             let is_open_hotkey = hk_id == tile.hotkey.id;
 
@@ -305,15 +307,12 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
 
         Message::WindowFocusChanged(wid, focused) => {
             tile.focused = focused;
-            if !focused {
-                if cfg!(target_os = "macos") {
-                    Task::done(Message::HideWindow(wid))
-                        .chain(Task::done(Message::ClearSearchQuery))
-                } else {
-                    // linux seems to not wanna unfocus it on start making it not show
-                    Task::none()
-                }
+            if focused {
+                Task::none()
+            } else if cfg!(target_os = "macos") {
+                Task::done(Message::HideWindow(wid)).chain(Task::done(Message::ClearSearchQuery))
             } else {
+                // linux seems to not wanna unfocus it on start making it not show
                 Task::none()
             }
         }

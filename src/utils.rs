@@ -53,7 +53,7 @@ fn search_dir(
         .max_depth(max_depth)
         .into_iter()
         .par_bridge()
-        .filter_map(|e| e.ok())
+        .filter_map(std::result::Result::ok)
         .filter(|e| e.path().extension().is_some_and(|ext| ext == "exe"))
         .filter_map(|entry| {
             let path = entry.path();
@@ -161,7 +161,7 @@ pub fn index_installed_apps(config: &Config) -> anyhow::Result<Vec<App>> {
     let config = read_config_file(path.as_path())?;
 
     if config.index_dirs.is_empty() {
-        tracing::debug!("No extra index dirs provided")
+        tracing::debug!("No extra index dirs provided");
     }
 
     #[cfg(target_os = "windows")]
@@ -266,9 +266,8 @@ pub fn is_url_like(s: &str) -> bool {
     }
     let mut parts = s.split('.');
 
-    let tld = match parts.next_back() {
-        Some(p) => p,
-        None => return false,
+    let Some(tld) = parts.next_back() else {
+        return false;
     };
 
     if tld.is_empty() || tld.len() > 63 || !tld.chars().all(|c| c.is_ascii_alphabetic()) {

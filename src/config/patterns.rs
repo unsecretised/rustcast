@@ -21,7 +21,7 @@ where
 {
     patterns
         .iter()
-        .map(|x| x.as_str())
+        .map(glob::Pattern::as_str)
         .collect::<Vec<_>>()
         .serialize(serializer)
 }

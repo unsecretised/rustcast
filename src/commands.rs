@@ -37,7 +37,7 @@ impl Function {
             Function::RunShellCommand(command, alias) => {
                 let query = query.to_string();
                 let final_command =
-                    format!(r#"{} {}"#, command, query.strip_prefix(alias).unwrap_or(""));
+                    format!(r"{} {}", command, query.strip_prefix(alias).unwrap_or(""));
                 Command::new("sh")
                     .arg("-c")
                     .arg(final_command.trim())
@@ -52,7 +52,7 @@ impl Function {
             }
 
             Function::GoogleSearch(query_string) => {
-                let query_args = query_string.replace(" ", "+");
+                let query_args = query_string.replace(' ', "+");
                 let query = config.search_url.replace("%s", &query_args);
                 let query = query.strip_suffix("?").unwrap_or(&query).to_string();
 
@@ -63,7 +63,7 @@ impl Function {
                 let open_url = if url.starts_with("http") {
                     url.to_owned()
                 } else {
-                    format!("https://{}", url)
+                    format!("https://{url}")
                 };
 
                 // Should never get here without it being validated first
@@ -73,7 +73,7 @@ impl Function {
             Function::Calculate(expr) => {
                 Clipboard::new()
                     .unwrap()
-                    .set_text(expr.eval().map(|x| x.to_string()).unwrap_or("".to_string()))
+                    .set_text(expr.eval().map_or(String::new(), |x| x.to_string()))
                     .unwrap_or(());
             }
 

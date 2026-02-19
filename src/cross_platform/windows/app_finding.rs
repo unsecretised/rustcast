@@ -22,7 +22,7 @@ use {
 /// `SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall`. `apps` has the relvant items
 /// appended to it.
 ///
-/// Based on https://stackoverflow.com/questions/2864984
+/// Based on <https://stackoverflow.com/questions/2864984>
 pub fn get_apps_from_registry(apps: &mut Vec<App>) {
     use std::ffi::OsString;
     let hkey = winreg::RegKey::predef(winreg::enums::HKEY_LOCAL_MACHINE);
@@ -34,55 +34,56 @@ pub fn get_apps_from_registry(apps: &mut Vec<App>) {
             .unwrap(),
     ];
 
-    registers.iter().for_each(|reg| {
-        reg.enum_keys().for_each(|key| {
-            // Not debug only just because it doesn't run too often
-            tracing::trace!(
-                target: "reg_app_search",
-                "App added: {:?}",
-                key
-            );
+    for (key, reg) in registers
+        .iter()
+        .flat_map(|reg| reg.enum_keys().zip(std::iter::repeat(reg)))
+    {
+        // Not debug only just because it doesn't run too often
+        tracing::trace!(
+            target: "reg_app_search",
+            "App added: {:?}",
+            key
+        );
 
-            // https://learn.microsoft.com/en-us/windows/win32/msi/uninstall-registry-key
-            let name = key.unwrap();
-            let key = reg.open_subkey(&name).unwrap();
-            let display_name: OsString = key.get_value("DisplayName").unwrap_or_default();
+        // https://learn.microsoft.com/en-us/windows/win32/msi/uninstall-registry-key
+        let name = key.unwrap();
+        let key = reg.open_subkey(&name).unwrap();
+        let display_name: OsString = key.get_value("DisplayName").unwrap_or_default();
 
-            // they might be useful one day ?
-            // let publisher = key.get_value("Publisher").unwrap_or(OsString::new());
-            // let version = key.get_value("DisplayVersion").unwrap_or(OsString::new());
+        // they might be useful one day ?
+        // let publisher = key.get_value("Publisher").unwrap_or(OsString::new());
+        // let version = key.get_value("DisplayVersion").unwrap_or(OsString::new());
 
-            // Trick, I saw on internet to point to the exe location..
-            let exe_path: OsString = key.get_value("DisplayIcon").unwrap_or_default();
-            if exe_path.is_empty() {
-                return;
-            }
-            // if there is something, it will be in the form of
-            // "C:\Program Files\Microsoft Office\Office16\WINWORD.EXE",0
-            let exe_path = exe_path.to_string_lossy().to_string();
-            let exe = PathBuf::from(exe_path.split(",").next().unwrap());
+        // Trick, I saw on internet to point to the exe location..
+        let exe_path: OsString = key.get_value("DisplayIcon").unwrap_or_default();
+        if exe_path.is_empty() {
+            return;
+        }
+        // if there is something, it will be in the form of
+        // "C:\Program Files\Microsoft Office\Office16\WINWORD.EXE",0
+        let exe_path = exe_path.to_string_lossy().to_string();
+        let exe = PathBuf::from(exe_path.split(",").next().unwrap());
 
-            // make sure it ends with .exe
-            if exe.extension() != Some(&OsString::from("exe")) {
-                return;
-            }
+        // make sure it ends with .exe
+        if exe.extension() != Some(&OsString::from("exe")) {
+            return;
+        }
 
-            if !display_name.is_empty() {
-                let icon = get_first_icon(&exe)
-                    .inspect_err(|e| tracing::error!("Error getting icons: {e}"))
-                    .ok()
-                    .flatten();
+        if !display_name.is_empty() {
+            let icon = get_first_icon(&exe)
+                .inspect_err(|e| tracing::error!("Error getting icons: {e}"))
+                .ok()
+                .flatten();
 
-                apps.push(App::new_executable(
-                    &display_name.clone().to_string_lossy(),
-                    &display_name.clone().to_string_lossy().to_lowercase(),
-                    "Application",
-                    exe,
-                    icon,
-                ))
-            }
-        });
-    });
+            apps.push(App::new_executable(
+                &display_name.clone().to_string_lossy(),
+                &display_name.clone().to_string_lossy().to_lowercase(),
+                "Application",
+                exe,
+                icon,
+            ))
+        }
+    }
 }
 
 /// Returns the set of known paths
@@ -103,7 +104,7 @@ fn get_windows_path(folder_id: &GUID) -> Option<PathBuf> {
         let folder = SHGetKnownFolderPath(folder_id, KF_FLAG_DEFAULT, None);
         if let Ok(folder) = folder {
             let path = folder.to_string().ok()?;
-            CoTaskMemFree(Some(folder.0 as *mut _));
+            CoTaskMemFree(Some(folder.0.cast()));
             Some(path.into())
         } else {
             None

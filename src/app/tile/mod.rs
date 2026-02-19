@@ -119,8 +119,8 @@ pub struct Tile {
 
 impl Tile {
     /// This returns the theme of the window
-    pub fn theme(&self, _: window::Id) -> Option<Theme> {
-        Some(self.theme.clone())
+    pub fn theme(&self, _: window::Id) -> Theme {
+        self.theme.clone()
     }
 
     /// This handles the subscriptions of the window
@@ -232,7 +232,7 @@ impl Tile {
         };
         let results: Vec<App> = options
             .search_prefix(&query)
-            .map(|x| x.to_owned())
+            .map(std::borrow::ToOwned::to_owned)
             .collect();
 
         self.results = results;
@@ -292,9 +292,9 @@ impl Tile {
 fn handle_hot_reloading() -> impl futures::Stream<Item = Message> {
     stream::channel(100, async |mut output| {
         let mut content = fs::read_to_string(
-            std::env::var("HOME").unwrap_or("".to_owned()) + "/.config/rustcast/config.toml",
+            std::env::var("HOME").unwrap_or_default() + "/.config/rustcast/config.toml",
         )
-        .unwrap_or("".to_string());
+        .unwrap_or_default();
 
         let paths = default_app_paths();
         let mut total_files: usize = paths
@@ -304,9 +304,9 @@ fn handle_hot_reloading() -> impl futures::Stream<Item = Message> {
 
         loop {
             let current_content = fs::read_to_string(
-                std::env::var("HOME").unwrap_or("".to_owned()) + "/.config/rustcast/config.toml",
+                std::env::var("HOME").unwrap_or_default() + "/.config/rustcast/config.toml",
             )
-            .unwrap_or("".to_string());
+            .unwrap_or_default();
 
             let current_total_files: usize = paths
                 .par_iter()
@@ -328,13 +328,12 @@ fn handle_hot_reloading() -> impl futures::Stream<Item = Message> {
 
 fn count_dirs_in_dir(dir: &PathBuf) -> usize {
     // Read the directory; if it fails, treat as empty
-    let entries = match fs::read_dir(dir) {
-        Ok(e) => e,
-        Err(_) => return 0,
+    let Ok(entries) = fs::read_dir(dir) else {
+        return 0;
     };
 
     entries
-        .filter_map(|entry| entry.ok())
+        .filter_map(std::result::Result::ok)
         .filter(|entry| entry.file_type().map(|t| t.is_dir()).unwrap_or(false))
         .count()
 }
