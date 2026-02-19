@@ -3,6 +3,7 @@ mod calculator;
 mod clipboard;
 mod commands;
 mod config;
+mod icon;
 mod styles;
 mod unit_conversion;
 mod utils;

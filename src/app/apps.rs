@@ -83,23 +83,22 @@ pub struct App {
     pub desc: String,
 
     /// The information specific to a certain type of app
-    pub app_data: AppData,
+    pub data: AppData,
 
     /// A unique ID generated for each instance of an App.
-    ///
-    /// This is made by atomically incrementing a counter every time a new instance of the struct
-    /// is made. The implementation of [`PartialEq`] uses this.
+    #[allow(unused)]
     id: usize,
 }
 
 impl PartialEq for App {
     fn eq(&self, other: &Self) -> bool {
-        self.app_data == other.app_data && self.name == other.name
+        self.data == other.data && self.name == other.name
     }
 }
 
 impl App {
-    /// Get the internal id
+    /// Get the numeric id of an app
+    #[allow(unused)]
     pub fn id(&self) -> usize {
         self.id
     }
@@ -113,7 +112,7 @@ impl App {
             name: name.to_string(),
             desc: desc.to_string(),
             id: ID.fetch_add(1, Ordering::Relaxed),
-            app_data: data,
+            data,
         }
     }
 
@@ -248,7 +247,7 @@ impl App {
             .height(50);
 
         if theme.show_icons {
-            match self.app_data {
+            match self.data {
                 AppData::Command {
                     icon: Some(ref icon),
                     ..
@@ -280,7 +279,7 @@ impl App {
         }
         row = row.push(container(text_block).width(Fill));
 
-        let msg = match self.app_data {
+        let msg = match self.data {
             AppData::Builtin {
                 command: AppCommand::Function(func),
                 ..
@@ -309,7 +308,7 @@ impl App {
             .height(50);
 
         container(content)
-            .id(format!("result-{}", id_num))
+            .id(format!("result-{id_num}"))
             .style(move |_| result_row_container_style(&theme, focused))
             .padding(8)
             .width(Fill)

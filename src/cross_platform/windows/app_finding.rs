@@ -1,6 +1,10 @@
 use {
-    crate::{app::apps::App, cross_platform::windows::get_acp},
-    std::path::PathBuf,
+    crate::{
+        app::apps::App,
+        cross_platform::windows::{appicon::get_first_icon, get_acp},
+    },
+    lnk::ShellLink,
+    std::path::{Path, PathBuf},
     walkdir::WalkDir,
     windows::{
         Win32::{
@@ -55,21 +59,26 @@ pub fn get_apps_from_registry(apps: &mut Vec<App>) {
             }
             // if there is something, it will be in the form of
             // "C:\Program Files\Microsoft Office\Office16\WINWORD.EXE",0
-            let exe_string = exe_path.to_string_lossy();
-            let exe_string = exe_string.split(",").next().unwrap();
+            let exe_path = exe_path.to_string_lossy().to_string();
+            let exe = PathBuf::from(exe_path.split(",").next().unwrap());
 
             // make sure it ends with .exe
-            if !exe_string.ends_with(".exe") {
+            if exe.extension() != Some(&OsString::from("exe")) {
                 return;
             }
 
             if !display_name.is_empty() {
+                let icon = get_first_icon(&exe)
+                    .inspect_err(|e| tracing::error!("Error getting icons: {e}"))
+                    .ok()
+                    .flatten();
+
                 apps.push(App::new_executable(
                     &display_name.clone().to_string_lossy(),
                     &display_name.clone().to_string_lossy().to_lowercase(),
                     "Application",
-                    exe_path,
-                    None,
+                    exe,
+                    icon,
                 ))
             }
         });
@@ -102,48 +111,78 @@ fn get_windows_path(folder_id: &GUID) -> Option<PathBuf> {
     }
 }
 
+fn parse_link(lnk: ShellLink, link_path: impl AsRef<Path>) -> Option<App> {
+    let link_path = link_path.as_ref();
+
+    let Some(target) = lnk.link_target() else {
+        tracing::trace!(
+            target: "smenu_app_search",
+            "Link at {} has no target, skipped",
+            link_path.display()
+        );
+        return None;
+    };
+    let target = PathBuf::from(target);
+
+    tracing::trace!(
+        "Link at {} loaded (target: {:?})",
+        link_path.display(),
+        &target
+    );
+
+    let Some(file_name) = target.file_name() else {
+        tracing::trace!(
+            target: "smenu_app_search",
+            "Link at {} skipped (not pointing to a directory)",
+            link_path.display()
+        );
+        return None;
+    };
+
+    tracing::trace!(
+        target: "smenu_app_search",
+        "Link at {} added",
+        link_path.display()
+    );
+
+    Some(App::new_executable(
+        &file_name.to_string_lossy(),
+        &file_name.to_string_lossy().to_lowercase(),
+        "Shortcut",
+        target.clone(),
+        None,
+    ))
+}
+
 pub fn index_start_menu() -> Vec<App> {
     WalkDir::new(r"C:\ProgramData\Microsoft\Windows\Start Menu\Programs")
         .into_iter()
         .filter_map(|x| x.ok())
-        .filter_map(|path| {
-            let lnk = lnk::ShellLink::open(path.path(), get_acp());
+        .filter_map(|entry| {
+            let ext = entry.path().extension();
+            let path = entry.path();
+
+            if ext.is_none() {
+                tracing::trace!("{} has no extension (maybe a dir)", path.display());
+                return None;
+            }
+
+            if let Some(ext) = ext
+                && ext != "lnk"
+            {
+                tracing::trace!("{} not a .lnk file, skipping", path.display());
+                return None;
+            }
+
+            let lnk = lnk::ShellLink::open(path, get_acp());
 
             match lnk {
-                Ok(x) => {
-                    let target = x.link_target();
-                    let file_name = path.file_name().to_string_lossy().to_string();
-
-                    match target {
-                        Some(target) => {
-                            tracing::trace!(
-                                target: "smenu_app_search",
-                                "Link at {} added",
-                                path.path().display()
-                            );
-                            Some(App::new_executable(
-                                &file_name,
-                                &file_name,
-                                "",
-                                PathBuf::from(target.clone()),
-                                None,
-                            ))
-                        },
-                        None => {
-                            tracing::trace!(
-                                target: "smenu_app_search",
-                                "Link at {} has no target, skipped",
-                                path.path().display()
-                            );
-                            None
-                        }
-                    }
-                }
+                Ok(x) => parse_link(x, path),
                 Err(e) => {
                     tracing::trace!(
                         target: "smenu_app_search",
                         "Error opening link {} ({e}), skipped",
-                        path.path().to_string_lossy()
+                        entry.path().to_string_lossy()
                     );
                     None
                 }

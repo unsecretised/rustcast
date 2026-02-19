@@ -2,6 +2,7 @@ use lnk::{Encoding, encoding::WINDOWS_1252};
 use windows::Win32::{Globalization::GetACP, UI::WindowsAndMessaging::GetCursorPos};
 
 pub mod app_finding;
+pub mod appicon;
 
 pub fn open_on_focused_monitor() -> iced::Point {
     use windows::Win32::Foundation::POINT;

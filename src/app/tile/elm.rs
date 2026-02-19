@@ -77,7 +77,7 @@ pub fn new(
     config: &Config,
 ) -> (Tile, Task<Message>) {
     tracing::trace!(target: "elm_init", "Initing ELM");
-    
+
     #[allow(unused_mut)]
     let mut settings = default_settings();
 
@@ -92,7 +92,7 @@ pub fn new(
     }
 
     tracing::trace!(target: "elm_init", "Opening window");
-    
+
     // id unused on windows, but not macos
     #[allow(unused)]
     let (id, open) = window::open(settings);

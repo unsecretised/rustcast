@@ -88,6 +88,7 @@ pub fn default_settings() -> Settings {
             #[cfg(target_os = "linux")]
             height: ((5 * 55) + 35 + DEFAULT_WINDOW_HEIGHT as usize) as f32,
         },
+        icon: Some(crate::icon::iced_icon::icon_256()),
         ..Default::default()
     }
 }
