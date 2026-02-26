@@ -20,6 +20,9 @@ haptic_feedback = true
 # Show the tray icon
 show_trayicon = true
 
+# hotkey for opening clipboard history
+clipboard_hotkey = "SUPER+SHIFT+2"
+
 
 [theme]
 
