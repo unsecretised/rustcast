@@ -1,17 +1,23 @@
 //! This handles all the different commands that rustcast can perform, such as opening apps,
 //! copying to clipboard, etc.
-use std::{process::Command, thread};
+use std::path::PathBuf;
+use std::process::Command;
+#[cfg(target_os = "macos")]
+use std::thread;
 
 use arboard::Clipboard;
+#[cfg(target_os = "macos")]
 use objc2_app_kit::NSWorkspace;
+#[cfg(target_os = "macos")]
 use objc2_foundation::NSURL;
 
+use crate::utils::open_application;
 use crate::{calculator::Expr, clipboard::ClipBoardContentType, config::Config};
 
 /// The different functions that rustcast can perform
 #[derive(Debug, Clone, PartialEq)]
 pub enum Function {
-    OpenApp(String),
+    OpenApp(PathBuf),
     RunShellCommand(String, String),
     OpenWebsite(String),
     RandomVar(i32), // Easter egg function
@@ -25,15 +31,9 @@ pub enum Function {
 impl Function {
     /// Run the command
     pub fn execute(&self, config: &Config, query: &str) {
+        tracing::debug!("Executing command: {:?}", self);
         match self {
-            Function::OpenApp(path) => {
-                let path = path.to_owned();
-                thread::spawn(move || {
-                    NSWorkspace::new().openURL(&NSURL::fileURLWithPath(
-                        &objc2_foundation::NSString::from_str(&path),
-                    ));
-                });
-            }
+            Function::OpenApp(path) => open_application(path.clone()), // I think the clone is necessary
             Function::RunShellCommand(command, alias) => {
                 let query = query.to_string();
                 let final_command =
@@ -55,32 +55,19 @@ impl Function {
                 let query_args = query_string.replace(" ", "+");
                 let query = config.search_url.replace("%s", &query_args);
                 let query = query.strip_suffix("?").unwrap_or(&query).to_string();
-                thread::spawn(move || {
-                    NSWorkspace::new().openURL(
-                        &NSURL::URLWithString_relativeToURL(
-                            &objc2_foundation::NSString::from_str(&query),
-                            None,
-                        )
-                        .unwrap(),
-                    );
-                });
+
+                open::that(query).unwrap();
             }
 
             Function::OpenWebsite(url) => {
-                let open = if url.starts_with("http") {
+                let open_url = if url.starts_with("http") {
                     url.to_owned()
                 } else {
                     format!("https://{}", url)
                 };
-                thread::spawn(move || {
-                    NSWorkspace::new().openURL(
-                        &NSURL::URLWithString_relativeToURL(
-                            &objc2_foundation::NSString::from_str(&open),
-                            None,
-                        )
-                        .unwrap(),
-                    );
-                });
+
+                // Should never get here without it being validated first
+                open::that(open_url).unwrap();
             }
 
             Function::Calculate(expr) => {
@@ -99,6 +86,7 @@ impl Function {
                 }
             },
 
+            #[cfg(target_os = "macos")]
             Function::OpenPrefPane => {
                 thread::spawn(move || {
                     NSWorkspace::new().openURL(&NSURL::fileURLWithPath(
@@ -109,7 +97,12 @@ impl Function {
                     ));
                 });
             }
+
             Function::Quit => std::process::exit(0),
+            f => {
+                // TODO: something in the UI to show this
+                tracing::error!("The function {:?} is unimplemented for this platform", f);
+            }
         }
     }
 }

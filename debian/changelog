@@ -1,0 +1,5 @@
+rustcast (0.5.2) unstable; urgency=medium
+
+  * Fix app discovery: [Merge pull request #149 from unsecretised/fix-app…]
+
+ -- Umang Surana <no1umang@gmail.com>  Fri, 13 Feb 2026 07:23:44 +0200

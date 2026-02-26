@@ -7,30 +7,47 @@ use crate::clipboard::ClipBoardContentType;
 use crate::config::Config;
 use crate::utils::open_settings;
 use crate::{app::apps::App, platform::default_app_paths};
+mod search_query;
+
+#[cfg(target_os = "windows")]
+use {
+    windows::Win32::Foundation::HWND, windows::Win32::UI::WindowsAndMessaging::SetForegroundWindow,
+};
+
+use std::{collections::BTreeMap, fs, ops::Bound, path::PathBuf, time::Duration};
+
+use iced::{
+    Subscription, Theme, event, futures,
+    futures::{
+        SinkExt,
+        channel::mpsc::{Sender, channel},
+    },
+    keyboard::{self, Modifiers, key::Named},
+    stream, window,
+};
+
+#[cfg(not(target_os = "linux"))]
+use global_hotkey::{GlobalHotKeyEvent, HotKeyState, hotkey::HotKey};
+
+use crate::{
+    app::{ArrowKey, Message, Move, Page, apps::App, tile::elm::default_app_paths},
+    clipboard::ClipBoardContentType,
+    config::Config,
+    cross_platform::open_settings,
+};
 
 use arboard::Clipboard;
-use global_hotkey::hotkey::HotKey;
-use global_hotkey::{GlobalHotKeyEvent, HotKeyState};
-
-use iced::futures::SinkExt;
-use iced::futures::channel::mpsc::{Sender, channel};
-use iced::keyboard::Modifiers;
-use iced::{
-    Subscription, Theme, futures,
-    keyboard::{self, key::Named},
-    stream,
-};
-use iced::{event, window};
-
-use objc2::rc::Retained;
-use objc2_app_kit::NSRunningApplication;
-use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
+use rayon::prelude::*;
 use tray_icon::TrayIcon;
 
 use std::fs;
 use std::ops::Bound;
 use std::time::Duration;
 use std::{collections::BTreeMap, path::Path};
+#[cfg(target_os = "macos")]
+use objc2::rc::Retained;
+#[cfg(target_os = "macos")]
+use objc2_app_kit::NSRunningApplication;
 
 /// This is a wrapper around the sender to disable dropping
 #[derive(Clone, Debug)]
@@ -60,7 +77,7 @@ impl AppIndex {
     pub fn from_apps(options: Vec<App>) -> Self {
         let mut bmap = BTreeMap::new();
         for app in options {
-            bmap.insert(app.name_lc.clone(), app);
+            bmap.insert(app.alias.clone(), app);
         }
 
         AppIndex { by_name: bmap }
@@ -93,10 +110,15 @@ pub struct Tile {
     emoji_apps: AppIndex,
     visible: bool,
     focused: bool,
+    #[cfg(target_os = "macos")]
     frontmost: Option<Retained<NSRunningApplication>>,
+    #[cfg(target_os = "windows")]
+    frontmost: Option<HWND>,
     pub config: Config,
     /// The opening hotkey
+    #[cfg(not(target_os = "linux"))]
     hotkey: HotKey,
+    #[cfg(not(target_os = "linux"))]
     clipboard_hotkey: Option<HotKey>,
     clipboard_content: Vec<ClipBoardContentType>,
     tray_icon: Option<TrayIcon>,
@@ -138,7 +160,10 @@ impl Tile {
             _ => None,
         });
         Subscription::batch([
+            #[cfg(not(target_os = "linux"))]
             Subscription::run(handle_hotkeys),
+            #[cfg(target_os = "linux")]
+            Subscription::run(handle_socket),
             keyboard,
             Subscription::run(handle_recipient),
             Subscription::run(handle_hot_reloading),
@@ -222,7 +247,26 @@ impl Tile {
         self.results = results;
     }
 
+    // Unused, keeping it for now
+    // pub fn capture_frontmost(&mut self) {
+    //     #[cfg(target_os = "macos")]
+    //     {
+    //         use objc2_app_kit::NSWorkspace;
+
+    //         let ws = NSWorkspace::sharedWorkspace();
+    //         self.frontmost = ws.frontmostApplication();
+    //     };
+
+    //     #[cfg(target_os = "windows")]
+    //     {
+    //         use windows::Win32::UI::WindowsAndMessaging::GetForegroundWindow;
+
+    //         self.frontmost = Some(unsafe { GetForegroundWindow() });
+    //     }
+    // }
+
     /// Gets the frontmost application to focus later.
+    #[cfg(target_os = "macos")]
     pub fn capture_frontmost(&mut self) {
         use objc2_app_kit::NSWorkspace;
 
@@ -231,12 +275,24 @@ impl Tile {
     }
 
     /// Restores the frontmost application.
-    #[allow(deprecated)]
+    #[allow(deprecated, unused)]
     pub fn restore_frontmost(&mut self) {
-        use objc2_app_kit::NSApplicationActivationOptions;
+        #[cfg(target_os = "macos")]
+        {
+            if let Some(app) = self.frontmost.take() {
+                use objc2_app_kit::NSApplicationActivationOptions;
 
-        if let Some(app) = self.frontmost.take() {
-            app.activateWithOptions(NSApplicationActivationOptions::ActivateIgnoringOtherApps);
+                app.activateWithOptions(NSApplicationActivationOptions::ActivateIgnoringOtherApps);
+            }
+        }
+
+        #[cfg(target_os = "windows")]
+        {
+            if let Some(handle) = self.frontmost {
+                unsafe {
+                    let _ = SetForegroundWindow(handle);
+                }
+            }
         }
     }
 }
@@ -293,6 +349,7 @@ fn count_dirs_in_dir(dir: impl AsRef<Path>) -> usize {
 }
 
 /// This is the subscription function that handles hotkeys for hiding / showing the window
+#[cfg(not(target_os = "linux"))]
 fn handle_hotkeys() -> impl futures::Stream<Item = Message> {
     stream::channel(100, async |mut output| {
         let receiver = GlobalHotKeyEvent::receiver();
@@ -300,9 +357,47 @@ fn handle_hotkeys() -> impl futures::Stream<Item = Message> {
             if let Ok(event) = receiver.recv()
                 && event.state == HotKeyState::Pressed
             {
-                output.try_send(Message::KeyPressed(event.id)).unwrap();
+                output.try_send(Message::HotkeyPressed(event.id)).unwrap();
             }
             tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    })
+}
+
+#[cfg(target_os = "linux")]
+fn handle_socket() -> impl futures::Stream<Item = Message> {
+    stream::channel(100, async |mut output| {
+        let clipboard = env::args().any(|arg| arg.trim() == "--cphist");
+        if clipboard {
+            output
+                .try_send(Message::OpenToPage(Page::ClipboardHistory))
+                .unwrap();
+        }
+
+        use std::env;
+
+        use tokio::net::UnixListener;
+
+        let _ = fs::remove_file(crate::SOCKET_PATH);
+        let listener = UnixListener::bind(crate::SOCKET_PATH).unwrap();
+
+        while let Ok((mut stream, _address)) = listener.accept().await {
+            let mut output = output.clone();
+            tokio::spawn(async move {
+                use tokio::io::AsyncReadExt;
+                use tracing::info;
+
+                let mut s = String::new();
+                let _ = stream.read_to_string(&mut s).await;
+                info!("received socket command {s}");
+                if s.trim() == "toggle" {
+                    output.try_send(Message::OpenToPage(Page::Main)).unwrap();
+                } else if s.trim() == "clipboard" {
+                    output
+                        .try_send(Message::OpenToPage(Page::ClipboardHistory))
+                        .unwrap();
+                }
+            });
         }
     })
 }
@@ -339,10 +434,9 @@ fn handle_clipboard_history() -> impl futures::Stream<Item = Message> {
 fn handle_recipient() -> impl futures::Stream<Item = Message> {
     stream::channel(100, async |mut output| {
         let (sender, mut recipient) = channel(100);
-        output
-            .send(Message::SetSender(ExtSender(sender)))
-            .await
-            .expect("Sender not sent");
+        let msg = Message::SetSender(ExtSender(sender));
+        tracing::debug!("Sending ExtSender");
+        output.send(msg).await.expect("Sender not sent");
         loop {
             let abcd = recipient
                 .try_next()

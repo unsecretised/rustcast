@@ -1,32 +1,29 @@
 //! This has the menubar icon logic for the app
 
+#[cfg(not(target_os = "linux"))]
 use global_hotkey::hotkey::{Code, HotKey, Modifiers};
-use image::{DynamicImage, ImageReader};
+use image::DynamicImage;
+use tokio::runtime::Runtime;
+#[cfg(not(target_os = "linux"))]
+use tray_icon::menu::accelerator::Accelerator;
 use tray_icon::{
     Icon, TrayIcon, TrayIconBuilder,
-    menu::{
-        AboutMetadataBuilder, Icon as Ico, Menu, MenuEvent, MenuItem, PredefinedMenuItem,
-        accelerator::Accelerator,
-    },
+    menu::{AboutMetadataBuilder, Icon as Ico, Menu, MenuEvent, MenuItem, PredefinedMenuItem},
 };
 
 use crate::{
-    app::{Message, tile::ExtSender},
-    utils::{open_settings, open_url},
+    app::{Message, Page, tile::ExtSender},
+    cross_platform::open_settings,
 };
 
-const DISCORD_LINK: &str = "https://discord.gg/bDfNYPbnC5";
-
-use tokio::runtime::Runtime;
-
-/// This create a new menubar icon for the app
-pub fn menu_icon(hotkey: HotKey, sender: ExtSender) -> TrayIcon {
+/// This creates a new menubar icon for the app
+pub fn menu_icon(#[cfg(not(target_os = "linux"))] hotkey: HotKey, sender: ExtSender) -> TrayIcon {
     let builder = TrayIconBuilder::new();
 
     let image = get_image();
     let icon = Icon::from_rgba(image.as_bytes().to_vec(), image.width(), image.height()).unwrap();
 
-    init_event_handler(sender, hotkey.id());
+    init_event_handler(sender);
 
     let menu = Menu::with_items(&[
         &version_item(),
@@ -34,7 +31,10 @@ pub fn menu_icon(hotkey: HotKey, sender: ExtSender) -> TrayIcon {
         &open_github_item(),
         &PredefinedMenuItem::separator(),
         &refresh_item(),
-        &open_item(hotkey),
+        &open_item(
+            #[cfg(not(target_os = "linux"))]
+            hotkey,
+        ),
         &PredefinedMenuItem::separator(),
         &open_issue_item(),
         &get_help_item(),
@@ -54,16 +54,32 @@ pub fn menu_icon(hotkey: HotKey, sender: ExtSender) -> TrayIcon {
 }
 
 fn get_image() -> DynamicImage {
-    let image_path = if cfg!(debug_assertions) {
-        "docs/icon.png"
-    } else {
-        "/Applications/Rustcast.app/Contents/Resources/icon.png"
-    };
+    #[cfg(target_os = "macos")]
+    {
+        use image::ImageReader;
 
-    ImageReader::open(image_path).unwrap().decode().unwrap()
+        let image_path = if cfg!(debug_assertions) && !cfg!(target_os = "macos") {
+            "docs/icon.png"
+        } else {
+            "/Applications/Rustcast.app/Contents/Resources/icon.png"
+        };
+
+        ImageReader::open(image_path).unwrap().decode().unwrap()
+    }
+
+    // TODO: make it load the image
+    #[cfg(any(target_os = "windows", target_os = "linux"))]
+    {
+        DynamicImage::ImageRgba8(image::RgbaImage::from_pixel(
+            64,
+            64,
+            image::Rgba([0, 0, 0, 255]),
+        ))
+    }
 }
 
-fn init_event_handler(sender: ExtSender, hotkey_id: u32) {
+fn init_event_handler(sender: ExtSender) {
+    tracing::debug!("Initing event handler");
     let runtime = Runtime::new().unwrap();
 
     MenuEvent::set_event_handler(Some(move |x: MenuEvent| {
@@ -80,27 +96,32 @@ fn init_event_handler(sender: ExtSender, hotkey_id: u32) {
                     .spawn(async move { sender.clone().try_send(Message::HideTrayIcon).unwrap() });
             }
             "open_issue_page" => {
-                open_url("https://github.com/unsecretised/rustcast/issues/new");
+                if let Err(e) = open::that("https://github.com/unsecretised/rustcast/issues/new") {
+                    tracing::error!("Error opening url: {}", e)
+                }
             }
             "show_rustcast" => {
                 runtime.spawn(async move {
                     sender
                         .clone()
-                        .try_send(Message::KeyPressed(hotkey_id))
+                        .try_send(Message::OpenToPage(Page::Main))
                         .unwrap();
                 });
             }
-            "open_discord" => {
-                open_url(DISCORD_LINK);
-            }
             "open_help_page" => {
-                open_url("https://github.com/unsecretised/rustcast/discussions/new?category=q-a");
+                if let Err(e) = open::that(
+                    "https://github.com/unsecretised/rustcast/discussions/new?category=q-a",
+                ) {
+                    tracing::error!("Error opening url: {}", e)
+                }
             }
             "open_preferences" => {
                 open_settings();
             }
             "open_github_page" => {
-                open_url("https://github.com/unsecretised/rustcast");
+                if let Err(e) = open::that("https://github.com/unsecretised/rustcast") {
+                    tracing::error!("Error opening url: {}", e)
+                }
             }
             _ => {}
         }
@@ -120,12 +141,15 @@ fn hide_tray_icon() -> MenuItem {
     MenuItem::with_id("hide_tray_icon", "Hide Tray Icon", true, None)
 }
 
-fn open_item(hotkey: HotKey) -> MenuItem {
+fn open_item(#[cfg(not(target_os = "linux"))] hotkey: HotKey) -> MenuItem {
     MenuItem::with_id(
         "show_rustcast",
         "Toggle View",
         true,
+        #[cfg(not(target_os = "linux"))]
         Some(Accelerator::new(Some(hotkey.mods), hotkey.key)),
+        #[cfg(target_os = "linux")]
+        None,
     )
 }
 
@@ -142,10 +166,13 @@ fn refresh_item() -> MenuItem {
         "refresh_rustcast",
         "Refresh",
         true,
+        #[cfg(not(target_os = "linux"))]
         Some(Accelerator::new(
             Some(Modifiers::SUPER),
             global_hotkey::hotkey::Code::KeyR,
         )),
+        #[cfg(target_os = "linux")]
+        None,
     )
 }
 
@@ -154,7 +181,10 @@ fn open_settings_item() -> MenuItem {
         "open_preferences",
         "Open Preferences",
         true,
+        #[cfg(not(target_os = "linux"))]
         Some(Accelerator::new(Some(Modifiers::SUPER), Code::Comma)),
+        #[cfg(target_os = "linux")]
+        None,
     )
 }
 

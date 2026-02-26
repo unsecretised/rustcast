@@ -1,5 +1,8 @@
 //! Main logic for the app
+
 use crate::commands::Function;
+use iced::window::{self, Id, Settings};
+
 use crate::{app::tile::ExtSender, clipboard::ClipBoardContentType};
 
 pub mod apps;
@@ -7,7 +10,6 @@ pub mod menubar;
 pub mod pages;
 pub mod tile;
 
-use iced::window::{self, Id, Settings};
 /// The default window width
 pub const WINDOW_WIDTH: f32 = 500.;
 
@@ -27,7 +29,7 @@ pub enum Page {
 
 /// The types of arrow keys
 #[allow(dead_code)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum ArrowKey {
     Up,
     Down,
@@ -36,7 +38,7 @@ pub enum ArrowKey {
 }
 
 /// The ways the cursor can move when a key is pressed
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Move {
     Back,
     Forwards(String),
@@ -47,12 +49,16 @@ pub enum Move {
 pub enum Message {
     OpenWindow,
     SearchQueryChanged(String, Id),
+    #[cfg(not(target_os = "linux"))]
+    HotkeyPressed(u32),
+    #[allow(unused)]
     KeyPressed(u32),
     FocusTextInput(Move),
     HideWindow(Id),
     RunFunction(Function),
     OpenFocused,
     ReturnFocus,
+    OpenToPage(Page),
     EscKeyPressed(Id),
     ClearSearchResults,
     WindowFocusChanged(Id, bool),
@@ -72,12 +78,26 @@ pub fn default_settings() -> Settings {
         decorations: false,
         minimizable: false,
         level: window::Level::AlwaysOnTop,
+        position: window::Position::Centered,
         transparent: true,
         blur: false,
         size: iced::Size {
             width: WINDOW_WIDTH,
+            #[cfg(not(target_os = "linux"))]
             height: DEFAULT_WINDOW_HEIGHT,
+            #[cfg(target_os = "linux")]
+            height: ((5 * 55) + 35 + DEFAULT_WINDOW_HEIGHT as usize) as f32,
         },
+        icon: Some(crate::icon::iced_icon::icon_256()),
         ..Default::default()
     }
 }
+
+//            Message::ReloadConfig => {
+//                self.config = toml::from_str(
+//                    &fs::read_to_string(get_config_file_path()).unwrap_or("".to_owned()),
+//                )
+//                .unwrap();
+//
+//                Task::none()
+//            }

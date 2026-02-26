@@ -1,6 +1,7 @@
 //! This module handles the logic for the new and view functions according to the elm
 //! architecture. If the subscription function becomes too large, it should be moved to this file
 
+#[cfg(not(target_os = "linux"))]
 use global_hotkey::hotkey::HotKey;
 use iced::border::Radius;
 use iced::widget::scrollable::{Anchor, Direction, Scrollbar};
@@ -12,10 +13,13 @@ use iced::{Length::Fill, widget::text_input};
 
 use rayon::slice::ParallelSliceMut;
 
+#[cfg(target_os = "windows")]
+use crate::app;
 use crate::app::pages::emoji::emoji_page;
 use crate::app::tile::AppIndex;
 use crate::config::Theme;
 use crate::styles::{contents_style, rustcast_text_input_style, tint, with_alpha};
+
 use crate::{app::WINDOW_WIDTH, platform};
 use crate::{app::pages::clipboard::clipboard_view, platform::get_installed_apps};
 use crate::{
@@ -24,18 +28,104 @@ use crate::{
     platform::transform_process_to_ui_element,
 };
 
-/// Initialise the base window
-pub fn new(hotkey: HotKey, config: &Config) -> (Tile, Task<Message>) {
-    let (id, open) = window::open(default_settings());
+use crate::utils::index_installed_apps;
+use crate::{
+    app::{Message, Page, apps::App, default_settings, tile::Tile},
+    config::Config,
+};
 
+#[cfg(target_os = "macos")]
+use crate::cross_platform::macos::{self, transform_process_to_ui_element};
+
+pub fn default_app_paths() -> Vec<String> {
+    #[cfg(target_os = "macos")]
+    {
+        let user_local_path = std::env::var("HOME").unwrap() + "/Applications/";
+
+        let paths = vec![
+            "/Applications/".to_string(),
+            user_local_path,
+            "/System/Applications/".to_string(),
+            "/System/Applications/Utilities/".to_string(),
+        ];
+        paths
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        Vec::new()
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        use std::path::PathBuf;
+
+        let mut dirs = Vec::new();
+
+        let user_dir: PathBuf = std::env::var("XDG_DATA_HOME")
+            .map(PathBuf::from)
+            .unwrap_or_else(|_| dirs::home_dir().unwrap().join(".local/share"));
+        dirs.push(user_dir.join("applications").to_string_lossy().to_string());
+
+        let sys_dirs = std::env::var("XDG_DATA_DIRS")
+            .unwrap_or_else(|_| "/usr/local/share:/usr/share".to_string());
+
+        for dir in sys_dirs.split(':') {
+            dirs.push(PathBuf::from(dir).to_string_lossy().to_string());
+        }
+
+        dirs
+    }
+}
+
+/// Initialise the base window
+pub fn new(
+    #[cfg(not(target_os = "linux"))] hotkey: HotKey,
+    config: &Config,
+) -> (Tile, Task<Message>) {
+    tracing::trace!(target: "elm_init", "Initing ELM");
+
+    #[allow(unused_mut)]
+    let mut settings = default_settings();
+
+    // get normal settings and modify position
+    #[cfg(target_os = "windows")]
+    {
+        use iced::window::Position;
+
+        use crate::cross_platform::windows::open_on_focused_monitor;
+        let pos = open_on_focused_monitor();
+        settings.position = Position::Specific(pos);
+    }
+
+    tracing::trace!(target: "elm_init", "Opening window");
+
+    // id unused on windows, but not macos
+    #[allow(unused)]
+    let (id, open) = window::open(settings);
+
+    #[cfg(target_os = "windows")]
+    let open: Task<app::Message> = open.discard();
+
+    #[cfg(target_os = "linux")]
+    let open = open
+        .discard()
+        .chain(window::run(id, |_| Message::OpenWindow));
+
+    #[cfg(target_os = "macos")]
     let open = open.discard().chain(window::run(id, |handle| {
         platform::window_config(&handle.window_handle().expect("Unable to get window handle"));
         transform_process_to_ui_element();
+        Message::OpenWindow
     }));
 
-    let store_icons = config.theme.show_icons;
-
     let mut options = get_installed_apps(store_icons);
+    if let Err(ref e) = options {
+        tracing::error!("Error indexing apps: {e}")
+    }
+
+    // Still try to load the rest
+    let mut options = options.unwrap_or_default();
 
     options.extend(config.shells.iter().map(|x| x.to_app()));
     options.extend(App::basic_apps());
@@ -50,13 +140,7 @@ pub fn new(hotkey: HotKey, config: &Config) -> (Tile, Task<Message>) {
             results: vec![],
             options,
             emoji_apps: AppIndex::from_apps(App::emoji_apps()),
-            hotkey,
             visible: true,
-            clipboard_hotkey: config
-                .clipboard_hotkey
-                .clone()
-                .and_then(|x| x.parse::<HotKey>().ok()),
-            frontmost: None,
             focused: false,
             config: config.clone(),
             theme: config.theme.to_owned().into(),
@@ -64,8 +148,27 @@ pub fn new(hotkey: HotKey, config: &Config) -> (Tile, Task<Message>) {
             tray_icon: None,
             sender: None,
             page: Page::Main,
+
+            #[cfg(target_os = "macos")]
+            frontmost: None,
+
+            #[cfg(target_os = "windows")]
+            frontmost: unsafe {
+                use windows::Win32::UI::WindowsAndMessaging::GetForegroundWindow;
+
+                Some(GetForegroundWindow())
+            },
+
+            #[cfg(not(target_os = "linux"))]
+            hotkey,
+
+            #[cfg(not(target_os = "linux"))]
+            clipboard_hotkey: config
+                .clipboard_hotkey
+                .clone()
+                .and_then(|x| x.parse::<HotKey>().ok()),
         },
-        Task::batch([open.map(|_| Message::OpenWindow)]),
+        open,
     )
 }
 
@@ -148,6 +251,10 @@ pub fn view(tile: &Tile, wid: window::Id) -> Element<'_, Message> {
                 .push(footer(tile.config.theme.clone(), results_count))
                 .spacing(0),
         )
+        .width(Length::Fixed(WINDOW_WIDTH))
+        .height(Length::Shrink)
+        .align_x(Alignment::Center)
+        .align_y(Alignment::Start)
         .style(|_| container::Style {
             text_color: None,
             background: None,
@@ -161,6 +268,10 @@ pub fn view(tile: &Tile, wid: window::Id) -> Element<'_, Message> {
 
         container(contents.clip(false))
             .style(|_| contents_style(&tile.config.theme))
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .align_x(Alignment::Center)
+            .align_y(Alignment::Start)
             .into()
     } else {
         space().into()
