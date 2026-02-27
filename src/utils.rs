@@ -1,5 +1,5 @@
 //! This has all the utility functions that rustcast uses
-use std::{fs::File, io::Write, path::Path, process::exit, thread};
+use std::{path::Path, thread};
 
 use iced::widget::image::Handle;
 use icns::IconFamily;
@@ -7,24 +7,7 @@ use image::RgbaImage;
 use objc2_app_kit::NSWorkspace;
 use objc2_foundation::NSURL;
 
-/// The default error log path (works only on unix systems, and must be changed for windows
-/// support)
-const ERR_LOG_PATH: &str = "/tmp/rustscan-err.log";
-
 /// This logs an error to the error log file
-pub(crate) fn log_error(msg: &str) {
-    eprintln!("{msg}");
-    if let Ok(mut file) = File::options().create(true).append(true).open(ERR_LOG_PATH) {
-        let _ = file.write_all(msg.as_bytes()).ok();
-    }
-}
-
-/// This logs an error to the error log file, and exits the program
-pub(crate) fn log_error_and_exit(msg: &str) -> ! {
-    log_error(msg);
-    exit(-1)
-}
-
 pub fn icns_data_to_handle(data: Vec<u8>) -> Option<Handle> {
     let family = IconFamily::read(std::io::Cursor::new(&data)).ok()?;
 

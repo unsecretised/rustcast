@@ -4,6 +4,7 @@ use std::io::Cursor;
 
 use global_hotkey::hotkey::{Code, HotKey, Modifiers};
 use image::{DynamicImage, ImageReader};
+use log::info;
 use tray_icon::{
     Icon, TrayIcon, TrayIconBuilder,
     menu::{
@@ -69,6 +70,7 @@ fn init_event_handler(sender: ExtSender, hotkey_id: u32) {
     MenuEvent::set_event_handler(Some(move |x: MenuEvent| {
         let sender = sender.clone();
         let sender = sender.0.clone();
+        info!("Menubar event called: {}", x.id.0);
         match x.id().0.as_str() {
             "refresh_rustcast" => {
                 runtime.spawn(async move {

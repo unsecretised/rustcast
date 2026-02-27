@@ -10,6 +10,7 @@ use iced::widget::operation;
 use iced::widget::operation::AbsoluteOffset;
 use iced::window;
 use iced::window::Id;
+use log::info;
 use rayon::slice::ParallelSliceMut;
 
 use crate::app::WINDOW_WIDTH;
@@ -160,6 +161,7 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
         }
 
         Message::ResizeWindow(id, height) => {
+            info!("Resizing rustcast window");
             tile.height = height;
             window::resize(
                 id,
@@ -187,6 +189,7 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
         },
 
         Message::ReloadConfig => {
+            info!("Reloading config");
             let new_config: Config = match toml::from_str(
                 &fs::read_to_string(
                     std::env::var("HOME").unwrap_or("".to_owned())
@@ -280,6 +283,7 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
         }
 
         Message::HideWindow(a) => {
+            info!("Hiding RustCast window");
             tile.visible = false;
             tile.focused = false;
             tile.page = Page::Main;
@@ -287,6 +291,7 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
         }
 
         Message::ReturnFocus => {
+            info!("Restoring frontmost app");
             tile.restore_frontmost();
             Task::none()
         }

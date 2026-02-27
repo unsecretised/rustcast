@@ -8,7 +8,7 @@ mod styles;
 mod unit_conversion;
 mod utils;
 
-use std::path::Path;
+use std::{fs::OpenOptions, path::Path};
 
 use crate::{
     app::tile::{self, Tile},
@@ -16,6 +16,8 @@ use crate::{
 };
 
 use global_hotkey::GlobalHotKeyManager;
+use log::info;
+use tracing_subscriber::{EnvFilter, Layer, util::SubscriberInitExt};
 
 use self::platform::set_activation_policy_accessory;
 
@@ -26,7 +28,7 @@ fn main() -> iced::Result {
 
     let file_path = home.clone() + "/.config/rustcast/config.toml";
     if !Path::new(&file_path).exists() {
-        std::fs::create_dir_all(home + "/.config/rustcast").unwrap();
+        std::fs::create_dir_all(home.clone() + "/.config/rustcast").unwrap();
         std::fs::write(
             &file_path,
             toml::to_string(&Config::default()).unwrap_or_else(|x| x.to_string()),
@@ -37,6 +39,22 @@ fn main() -> iced::Result {
         Ok(a) => toml::from_str(&a).unwrap_or(Config::default()),
         Err(_) => Config::default(),
     };
+
+    if cfg!(debug_assertions) {
+        let sub = tracing_subscriber::fmt().finish();
+        EnvFilter::new("rustcast=info").with_subscriber(sub).init();
+    } else {
+        let file = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(config.log_path.replace("~", &home))
+            .unwrap();
+
+        let sub = tracing_subscriber::fmt().with_writer(file).finish();
+        EnvFilter::new("rustcast=info").with_subscriber(sub).init();
+    };
+
+    info!("Config loaded");
 
     let manager = GlobalHotKeyManager::new().unwrap();
 
@@ -53,6 +71,9 @@ fn main() -> iced::Result {
     manager
         .register_all(&hotkeys)
         .expect("Unable to register hotkey");
+
+    info!("Hotkeys loaded");
+    info!("Starting rustcast");
 
     iced::daemon(
         move || tile::elm::new(show_hide, &config),

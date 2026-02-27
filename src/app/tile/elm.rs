@@ -10,6 +10,7 @@ use iced::{Alignment, Color, Length, Vector, window};
 use iced::{Element, Task};
 use iced::{Length::Fill, widget::text_input};
 
+use log::info;
 use rayon::slice::ParallelSliceMut;
 
 use crate::app::DEFAULT_WINDOW_HEIGHT;
@@ -28,18 +29,23 @@ use crate::{
 /// Initialise the base window
 pub fn new(hotkey: HotKey, config: &Config) -> (Tile, Task<Message>) {
     let (id, open) = window::open(default_settings());
+    info!("Opening window");
 
     let open = open.discard().chain(window::run(id, |handle| {
         platform::window_config(&handle.window_handle().expect("Unable to get window handle"));
         transform_process_to_ui_element();
     }));
+    info!("MacOS platform config applied");
 
     let store_icons = config.theme.show_icons;
 
     let mut options = get_installed_apps(store_icons);
 
     options.extend(config.shells.iter().map(|x| x.to_app()));
+    info!("Loaded shell commands");
+
     options.extend(App::basic_apps());
+    info!("Loaded basic apps / default apps");
     options.par_sort_by_key(|x| x.name.len());
     let options = AppIndex::from_apps(options);
 

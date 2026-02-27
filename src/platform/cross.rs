@@ -4,12 +4,13 @@ use std::{
     process::exit,
 };
 
+use log::{error, info};
 use rayon::iter::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator as _};
 
 use crate::{
     app::apps::{App, AppCommand},
     commands::Function,
-    utils::{handle_from_icns, log_error, log_error_and_exit},
+    utils::handle_from_icns,
 };
 
 pub fn default_app_paths()
@@ -39,17 +40,23 @@ fn discover_apps(
     dir: impl AsRef<Path>,
     store_icons: bool,
 ) -> impl IntoParallelIterator<Item = App> {
+    info!("Indexing apps started");
     let entries: Vec<_> = fs::read_dir(dir.as_ref())
         .unwrap_or_else(|x| {
-            log_error_and_exit(&x.to_string());
+            error!(
+                "Could not read directry: {} because of:\n{}",
+                dir.as_ref().to_string_lossy(),
+                x
+            );
+            exit(1)
         })
         .filter_map(|x| x.ok())
         .collect();
 
     entries.into_par_iter().filter_map(move |x| {
         let file_type = x.file_type().unwrap_or_else(|e| {
-            log_error(&e.to_string());
-            exit(-1)
+            error!("Unable to map entries: {}", &e.to_string());
+            exit(1)
         });
         if !file_type.is_dir() {
             return None;
@@ -57,17 +64,21 @@ fn discover_apps(
 
         let file_name_os = x.file_name();
         let file_name = file_name_os.into_string().unwrap_or_else(|e| {
-            log_error(e.to_str().unwrap_or(""));
-            exit(-1)
+            error!(
+                "Unable to get file name due to: {}",
+                e.to_str().unwrap_or("")
+            );
+            exit(1)
         });
+
         if !file_name.ends_with(".app") {
             return None;
         }
 
         let path = x.path();
         let path_str = path.to_str().map(|x| x.to_string()).unwrap_or_else(|| {
-            log_error("Unable to get file_name");
-            exit(-1)
+            error!("Unable to get file_name");
+            exit(1)
         });
 
         let icons = if store_icons {

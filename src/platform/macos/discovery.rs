@@ -20,6 +20,7 @@ use std::{
     sync::LazyLock,
 };
 
+use log::error;
 use objc2_core_foundation::{CFArray, CFRetained, CFURL};
 use objc2_foundation::{NSBundle, NSNumber, NSString, NSURL, ns_string};
 use rayon::iter::{IntoParallelIterator, ParallelIterator as _};
@@ -27,7 +28,7 @@ use rayon::iter::{IntoParallelIterator, ParallelIterator as _};
 use crate::{
     app::apps::{App, AppCommand},
     commands::Function,
-    utils::{handle_from_icns, log_error},
+    utils::handle_from_icns,
 };
 
 use super::super::cross;
@@ -64,7 +65,7 @@ unsafe fn log_dlerror(prefix: &str) {
         unsafe { CStr::from_ptr(error) }.to_string_lossy()
     };
 
-    log_error(&format!("{prefix}: {message}"));
+    error!("{prefix}: {message}");
 }
 
 /// Dynamically loads `LSCopyAllApplicationURLs` from the LaunchServices framework.
@@ -136,14 +137,12 @@ fn registered_app_urls() -> Option<CFRetained<CFArray<CFURL>>> {
     let err = unsafe { sym(&mut urls_ptr) };
 
     if err != 0 {
-        log_error(&format!(
-            "LSCopyAllApplicationURLs failed with error code: {err}"
-        ));
+        error!("LSCopyAllApplicationURLs failed with error code: {err}");
         return None;
     }
 
     let Some(url_ptr) = NonNull::new(urls_ptr.cast_mut()) else {
-        log_error("LSCopyAllApplicationURLs returned null on success");
+        error!("LSCopyAllApplicationURLs returned null on success");
         return None;
     };
 
@@ -272,7 +271,7 @@ fn query_app(url: impl AsRef<NSURL>, store_icons: bool) -> Option<App> {
 /// * `store_icons` - Whether to load application icons (slower but needed for display)
 pub(crate) fn get_installed_apps(store_icons: bool) -> Vec<App> {
     let Some(registered_app_urls) = registered_app_urls() else {
-        log_error("native app discovery unavailable, falling back to directory scan");
+        error!("native app discovery unavailable, falling back to directory scan");
         return cross::get_installed_apps(store_icons);
     };
 

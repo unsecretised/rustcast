@@ -22,11 +22,13 @@ use iced::{
 };
 use iced::{event, window};
 
+use log::info;
 use objc2::rc::Retained;
 use objc2_app_kit::NSRunningApplication;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use tray_icon::TrayIcon;
 
+use std::fmt::Debug;
 use std::fs;
 use std::ops::Bound;
 use std::time::Duration;
@@ -70,18 +72,23 @@ impl AppIndex {
 /// This is the base window, and its a "Tile"
 /// Its fields are:
 /// - Theme ([`iced::Theme`])
+/// - Focus "ID" (which element in the choices is currently selected)
 /// - Query (String)
 /// - Query Lowercase (String, but lowercase)
 /// - Previous Query Lowercase (String)
 /// - Results (Vec<[`App`]>) the results of the search
-/// - Options (Vec<[`App`]>) the options to search through
+/// - Options ([`AppIndex`]) the options to search through (is a BTreeMap wrapper)
+/// - Emoji Apps ([`AppIndex`]) emojis that are considered as "apps"
 /// - Visible (bool) whether the window is visible or not
 /// - Focused (bool) whether the window is focused or not
 /// - Frontmost ([`Option<Retained<NSRunningApplication>>`]) the frontmost application before the window was opened
 /// - Config ([`Config`]) the app's config
-/// - Open Hotkey ID (`u32`) the id of the hotkey that opens the window
+/// - Hotkeys, storing the hotkey used for directly opening to the clipboard history page, and
+///   opening the app
+/// - Sender (The [`ExtSender`] that sends messages, used by the tray icon currently)
 /// - Clipboard Content (`Vec<`[`ClipBoardContentType`]`>`) all of the cliboard contents
 /// - Page ([`Page`]) the current page of the window (main or clipboard history)
+/// - RustCast's height: to figure out which height to resize to
 #[derive(Clone)]
 pub struct Tile {
     pub theme: iced::Theme,
@@ -95,7 +102,6 @@ pub struct Tile {
     focused: bool,
     frontmost: Option<Retained<NSRunningApplication>>,
     pub config: Config,
-    /// The opening hotkey
     hotkeys: Hotkeys,
     clipboard_content: Vec<ClipBoardContentType>,
     tray_icon: Option<TrayIcon>,
@@ -104,7 +110,7 @@ pub struct Tile {
     pub height: f32,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Hotkeys {
     pub toggle: HotKey,
     pub clipboard_hotkey: HotKey,
@@ -285,6 +291,7 @@ fn handle_hot_reloading() -> impl futures::Stream<Item = Message> {
     })
 }
 
+/// Helper fn for counting directories (since macos `.app`'s are directories) inside a directory
 fn count_dirs_in_dir(dir: impl AsRef<Path>) -> usize {
     // Read the directory; if it fails, treat as empty
     let entries = match fs::read_dir(dir) {
@@ -298,11 +305,12 @@ fn count_dirs_in_dir(dir: impl AsRef<Path>) -> usize {
         .count()
 }
 
-/// This is the subscription function that handles hotkeys for hiding / showing the window
+/// This is the subscription function that handles hotkeys, e.g. for hiding / showing the window
 fn handle_hotkeys() -> impl futures::Stream<Item = Message> {
     stream::channel(100, async |mut output| {
         let receiver = GlobalHotKeyEvent::receiver();
         loop {
+            info!("Hotkey received");
             if let Ok(event) = receiver.recv()
                 && event.state == HotKeyState::Pressed
             {
@@ -331,6 +339,7 @@ fn handle_clipboard_history() -> impl futures::Stream<Item = Message> {
             if byte_rep != prev_byte_rep
                 && let Some(content) = &byte_rep
             {
+                info!("Adding item to cbhist");
                 output
                     .send(Message::ClipboardHistory(content.to_owned()))
                     .await
@@ -342,6 +351,7 @@ fn handle_clipboard_history() -> impl futures::Stream<Item = Message> {
     })
 }
 
+/// Handles the rx / receiver for sending and receiving messages
 fn handle_recipient() -> impl futures::Stream<Item = Message> {
     stream::channel(100, async |mut output| {
         let (sender, mut recipient) = channel(100);
@@ -353,6 +363,7 @@ fn handle_recipient() -> impl futures::Stream<Item = Message> {
             let abcd = recipient
                 .try_recv()
                 .map(async |msg| {
+                    info!("Sending a message");
                     output.send(msg).await.unwrap();
                 })
                 .ok();

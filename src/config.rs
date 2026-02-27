@@ -23,6 +23,7 @@ pub struct Config {
     pub haptic_feedback: bool,
     pub show_trayicon: bool,
     pub shells: Vec<Shelly>,
+    pub log_path: String,
 }
 
 impl Default for Config {
@@ -37,6 +38,7 @@ impl Default for Config {
             search_url: "https://google.com/search?q=%s".to_string(),
             haptic_feedback: false,
             show_trayicon: true,
+            log_path: "/tmp/rustcast.log".to_string(),
             shells: vec![],
         }
     }
