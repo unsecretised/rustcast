@@ -186,14 +186,15 @@ impl Shelly {
             }
         });
         App {
+            ranking: 0,
             open_command: AppCommand::Function(Function::RunShellCommand(
                 self_clone.command,
                 self_clone.alias_lc.clone(),
             )),
             desc: "Shell Command".to_string(),
             icons: icon,
-            name: self_clone.alias,
-            name_lc: self_clone.alias_lc,
+            display_name: self_clone.alias,
+            search_name: self_clone.alias_lc,
         }
     }
 }

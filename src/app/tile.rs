@@ -57,12 +57,20 @@ impl AppIndex {
             .take_while(move |(k, _)| k.starts_with(prefix))
             .map(|(_, v)| v)
     }
+    fn update_ranking(&mut self, name: &str) {
+        let app = match self.by_name.get_mut(name) {
+            Some(a) => a,
+            None => return,
+        };
+
+        app.ranking += 5;
+    }
 
     /// Factory function for creating
     pub fn from_apps(options: Vec<App>) -> Self {
         let mut bmap = BTreeMap::new();
         for app in options {
-            bmap.insert(app.name_lc.clone(), app);
+            bmap.insert(app.search_name.clone(), app);
         }
 
         AppIndex { by_name: bmap }

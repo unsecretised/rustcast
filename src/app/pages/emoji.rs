@@ -21,7 +21,7 @@ pub fn emoji_page(
         for emoji in emoji_row {
             let theme_clone = tile_theme.clone();
             let element_column = Column::new().push(
-                Text::new(emoji.name.clone())
+                Text::new(emoji.display_name.clone())
                     .font(tile_theme.font())
                     .size(30)
                     .width(Length::Fill)
@@ -37,7 +37,7 @@ pub fn emoji_page(
                         .width(70)
                         .height(70)
                         .on_press(Message::RunFunction(Function::CopyToClipboard(
-                            ClipBoardContentType::Text(emoji.name),
+                            ClipBoardContentType::Text(emoji.display_name),
                         )))
                         .style(move |_, _| emoji_button_style(&value)),
                 )

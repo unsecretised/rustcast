@@ -172,21 +172,34 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
             )
         }
 
-        Message::OpenFocused => match tile.results.get(tile.focus_id as usize) {
-            Some(App {
-                open_command: AppCommand::Function(func),
-                ..
-            }) => Task::done(Message::RunFunction(func.to_owned())),
-            Some(App {
-                open_command: AppCommand::Message(msg),
-                ..
-            }) => Task::done(msg.to_owned()),
-            Some(App {
-                open_command: AppCommand::Display,
-                ..
-            }) => Task::done(Message::ReturnFocus),
-            None => Task::none(),
-        },
+        Message::OpenFocused => {
+            // TODO: update ranking here
+            match tile.results.get(tile.focus_id as usize) {
+                Some(App {
+                    search_name: name,
+                    open_command: AppCommand::Function(func),
+                    ..
+                }) => {
+                    info!("Updating ranking for: {name}");
+                    tile.options.update_ranking(name);
+                    Task::done(Message::RunFunction(func.to_owned()))
+                }
+                Some(App {
+                    search_name: name,
+                    open_command: AppCommand::Message(msg),
+                    ..
+                }) => {
+                    info!("Updating ranking for: {name}");
+                    tile.options.update_ranking(name);
+                    Task::done(msg.to_owned())
+                }
+                Some(App {
+                    open_command: AppCommand::Display,
+                    ..
+                }) => Task::done(Message::ReturnFocus),
+                None => Task::none(),
+            }
+        }
 
         Message::ReloadConfig => {
             info!("Reloading config");
@@ -204,7 +217,7 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
             let mut new_options = get_installed_apps(new_config.theme.show_icons);
             new_options.extend(new_config.shells.iter().map(|x| x.to_app()));
             new_options.extend(App::basic_apps());
-            new_options.par_sort_by_key(|x| x.name.len());
+            new_options.par_sort_by_key(|x| x.display_name.len());
 
             tile.theme = new_config.theme.to_owned().into();
             tile.config = new_config;
@@ -351,29 +364,32 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
             } else if tile.query_lc == "randomvar" {
                 let rand_num = rand::random_range(0..100);
                 tile.results = vec![App {
+                    ranking: 0,
                     open_command: AppCommand::Function(Function::RandomVar(rand_num)),
                     desc: "Easter egg".to_string(),
                     icons: None,
-                    name: rand_num.to_string(),
-                    name_lc: String::new(),
+                    display_name: rand_num.to_string(),
+                    search_name: String::new(),
                 }];
                 return single_item_resize_task(id);
             } else if tile.query_lc == "67" {
                 tile.results = vec![App {
+                    ranking: 0,
                     open_command: AppCommand::Function(Function::RandomVar(67)),
                     desc: "Easter egg".to_string(),
                     icons: None,
-                    name: 67.to_string(),
-                    name_lc: String::new(),
+                    display_name: 67.to_string(),
+                    search_name: String::new(),
                 }];
                 return single_item_resize_task(id);
             } else if tile.query_lc.ends_with("?") {
                 tile.results = vec![App {
+                    ranking: 0,
                     open_command: AppCommand::Function(Function::GoogleSearch(tile.query.clone())),
                     icons: None,
                     desc: "Web Search".to_string(),
-                    name: format!("Search for: {}", tile.query),
-                    name_lc: String::new(),
+                    display_name: format!("Search for: {}", tile.query),
+                    search_name: String::new(),
                 }];
             } else if tile.query_lc == "cbhist" {
                 task = task.chain(Task::done(Message::SwitchToPage(Page::ClipboardHistory)));
@@ -388,11 +404,12 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
                 && let Some(res) = Expr::from_str(&tile.query).ok()
             {
                 tile.results.push(App {
+                    ranking: 0,
                     open_command: AppCommand::Function(Function::Calculate(res.clone())),
                     desc: RUSTCAST_DESC_NAME.to_string(),
                     icons: None,
-                    name: res.eval().map(|x| x.to_string()).unwrap_or("".to_string()),
-                    name_lc: "".to_string(),
+                    display_name: res.eval().map(|x| x.to_string()).unwrap_or("".to_string()),
+                    search_name: "".to_string(),
                 });
             } else if tile.results.is_empty()
                 && let Some(conversions) = unit_conversion::convert_query(&tile.query)
@@ -411,39 +428,43 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
                             conversion.target_unit.name
                         );
                         App {
+                            ranking: 0,
                             open_command: AppCommand::Function(Function::CopyToClipboard(
                                 ClipBoardContentType::Text(target.clone()),
                             )),
                             desc: source,
                             icons: None,
-                            name: target,
-                            name_lc: String::new(),
+                            display_name: target,
+                            search_name: String::new(),
                         }
                     })
                     .collect();
             } else if tile.results.is_empty() && is_valid_url(&tile.query) {
                 tile.results.push(App {
+                    ranking: 0,
                     open_command: AppCommand::Function(Function::OpenWebsite(tile.query.clone())),
                     desc: "Web Browsing".to_string(),
                     icons: None,
-                    name: "Open Website: ".to_string() + &tile.query,
-                    name_lc: "".to_string(),
+                    display_name: "Open Website: ".to_string() + &tile.query,
+                    search_name: "".to_string(),
                 });
             } else if tile.query_lc.split(' ').count() > 1 {
                 tile.results.push(App {
+                    ranking: 0,
                     open_command: AppCommand::Function(Function::GoogleSearch(tile.query.clone())),
                     icons: None,
                     desc: "Web Search".to_string(),
-                    name: format!("Search for: {}", tile.query),
-                    name_lc: String::new(),
+                    display_name: format!("Search for: {}", tile.query),
+                    search_name: String::new(),
                 });
             } else if tile.results.is_empty() && tile.query_lc == "lemon" {
                 tile.results.push(App {
+                    ranking: 0,
                     open_command: AppCommand::Display,
                     desc: "Easter Egg".to_string(),
                     icons: lemon_icon_handle(),
-                    name: "Lemon".to_string(),
-                    name_lc: "".to_string(),
+                    display_name: "Lemon".to_string(),
+                    search_name: "".to_string(),
                 });
             }
             if !tile.query_lc.is_empty() && tile.page == Page::EmojiSearch {
@@ -453,6 +474,8 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
                     .map(|x| x.to_owned())
                     .collect();
             }
+
+            tile.results.sort_by_key(|x| -x.ranking);
 
             let new_length = tile.results.len();
             let max_elem = min(5, new_length);
