@@ -186,6 +186,7 @@ impl Shelly {
             }
         });
         App {
+            ranking: 0,
             open_command: AppCommand::Function(Function::RunShellCommand(
                 self_clone.command,
                 self_clone.alias_lc.clone(),

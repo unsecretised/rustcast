@@ -252,6 +252,7 @@ fn query_app(url: impl AsRef<NSURL>, store_icons: bool) -> Option<App> {
         .flatten();
 
     Some(App {
+        ranking: 0,
         display_name: name.clone(),
         search_name: name.to_lowercase(),
         desc: "Application".to_string(),

@@ -26,6 +26,7 @@ impl ClipBoardContentType {
         display_name = display_name.lines().next().unwrap_or("").to_string();
 
         App {
+            ranking: 0,
             open_command: crate::app::apps::AppCommand::Function(Function::CopyToClipboard(
                 self_clone.to_owned(),
             )),

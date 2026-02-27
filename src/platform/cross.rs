@@ -152,6 +152,7 @@ fn discover_apps(
 
         let name = file_name.strip_suffix(".app").unwrap().to_string();
         Some(App {
+            ranking: 0,
             open_command: AppCommand::Function(Function::OpenApp(path_str)),
             desc: "Application".to_string(),
             icons,

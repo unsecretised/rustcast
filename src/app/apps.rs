@@ -34,6 +34,7 @@ pub enum AppCommand {
 /// "run" the app.
 #[derive(Debug, Clone)]
 pub struct App {
+    pub ranking: i32,
     pub open_command: AppCommand,
     pub desc: String,
     pub icons: Option<iced::widget::image::Handle>,
@@ -56,6 +57,7 @@ impl App {
         emojis::iter()
             .filter(|x| x.unicode_version() < emojis::UnicodeVersion::new(17, 13))
             .map(|x| App {
+                ranking: 0,
                 icons: None,
                 display_name: x.to_string(),
                 search_name: x.name().to_string(),
@@ -74,6 +76,7 @@ impl App {
 
         vec![
             App {
+                ranking: 0,
                 open_command: AppCommand::Function(Function::Quit),
                 desc: RUSTCAST_DESC_NAME.to_string(),
                 icons: icons.clone(),
@@ -81,6 +84,7 @@ impl App {
                 search_name: "quit".to_string(),
             },
             App {
+                ranking: 0,
                 open_command: AppCommand::Function(Function::OpenPrefPane),
                 desc: RUSTCAST_DESC_NAME.to_string(),
                 icons: icons.clone(),
@@ -88,6 +92,7 @@ impl App {
                 search_name: "settings".to_string(),
             },
             App {
+                ranking: 0,
                 open_command: AppCommand::Message(Message::SwitchToPage(Page::EmojiSearch)),
                 desc: RUSTCAST_DESC_NAME.to_string(),
                 icons: icons.clone(),
@@ -95,6 +100,7 @@ impl App {
                 search_name: "emoji".to_string(),
             },
             App {
+                ranking: 0,
                 open_command: AppCommand::Message(Message::SwitchToPage(Page::ClipboardHistory)),
                 desc: RUSTCAST_DESC_NAME.to_string(),
                 icons: icons.clone(),
@@ -102,6 +108,7 @@ impl App {
                 search_name: "clipboard".to_string(),
             },
             App {
+                ranking: 0,
                 open_command: AppCommand::Message(Message::ReloadConfig),
                 desc: RUSTCAST_DESC_NAME.to_string(),
                 icons: icons.clone(),
@@ -109,6 +116,7 @@ impl App {
                 search_name: "refresh".to_string(),
             },
             App {
+                ranking: 0,
                 open_command: AppCommand::Display,
                 desc: RUSTCAST_DESC_NAME.to_string(),
                 icons: icons.clone(),
