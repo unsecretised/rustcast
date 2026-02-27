@@ -252,8 +252,8 @@ fn query_app(url: impl AsRef<NSURL>, store_icons: bool) -> Option<App> {
         .flatten();
 
     Some(App {
-        name: name.clone(),
-        name_lc: name.to_lowercase(),
+        display_name: name.clone(),
+        search_name: name.to_lowercase(),
         desc: "Application".to_string(),
         icons,
         open_command: AppCommand::Function(Function::OpenApp(path.to_string_lossy().into_owned())),

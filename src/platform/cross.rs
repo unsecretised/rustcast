@@ -155,8 +155,8 @@ fn discover_apps(
             open_command: AppCommand::Function(Function::OpenApp(path_str)),
             desc: "Application".to_string(),
             icons,
-            name_lc: name.to_lowercase(),
-            name,
+            search_name: name.to_lowercase(),
+            display_name: name,
         })
     })
 }

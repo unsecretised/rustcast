@@ -192,8 +192,8 @@ impl Shelly {
             )),
             desc: "Shell Command".to_string(),
             icons: icon,
-            name: self_clone.alias,
-            name_lc: self_clone.alias_lc,
+            display_name: self_clone.alias,
+            search_name: self_clone.alias_lc,
         }
     }
 }

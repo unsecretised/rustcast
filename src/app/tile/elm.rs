@@ -46,7 +46,7 @@ pub fn new(hotkey: HotKey, config: &Config) -> (Tile, Task<Message>) {
 
     options.extend(App::basic_apps());
     info!("Loaded basic apps / default apps");
-    options.par_sort_by_key(|x| x.name.len());
+    options.par_sort_by_key(|x| x.display_name.len());
     let options = AppIndex::from_apps(options);
 
     let hotkeys = Hotkeys {

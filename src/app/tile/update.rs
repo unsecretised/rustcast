@@ -204,7 +204,7 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
             let mut new_options = get_installed_apps(new_config.theme.show_icons);
             new_options.extend(new_config.shells.iter().map(|x| x.to_app()));
             new_options.extend(App::basic_apps());
-            new_options.par_sort_by_key(|x| x.name.len());
+            new_options.par_sort_by_key(|x| x.display_name.len());
 
             tile.theme = new_config.theme.to_owned().into();
             tile.config = new_config;
@@ -354,8 +354,8 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
                     open_command: AppCommand::Function(Function::RandomVar(rand_num)),
                     desc: "Easter egg".to_string(),
                     icons: None,
-                    name: rand_num.to_string(),
-                    name_lc: String::new(),
+                    display_name: rand_num.to_string(),
+                    search_name: String::new(),
                 }];
                 return single_item_resize_task(id);
             } else if tile.query_lc == "67" {
@@ -363,8 +363,8 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
                     open_command: AppCommand::Function(Function::RandomVar(67)),
                     desc: "Easter egg".to_string(),
                     icons: None,
-                    name: 67.to_string(),
-                    name_lc: String::new(),
+                    display_name: 67.to_string(),
+                    search_name: String::new(),
                 }];
                 return single_item_resize_task(id);
             } else if tile.query_lc.ends_with("?") {
@@ -372,8 +372,8 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
                     open_command: AppCommand::Function(Function::GoogleSearch(tile.query.clone())),
                     icons: None,
                     desc: "Web Search".to_string(),
-                    name: format!("Search for: {}", tile.query),
-                    name_lc: String::new(),
+                    display_name: format!("Search for: {}", tile.query),
+                    search_name: String::new(),
                 }];
             } else if tile.query_lc == "cbhist" {
                 task = task.chain(Task::done(Message::SwitchToPage(Page::ClipboardHistory)));
@@ -391,8 +391,8 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
                     open_command: AppCommand::Function(Function::Calculate(res.clone())),
                     desc: RUSTCAST_DESC_NAME.to_string(),
                     icons: None,
-                    name: res.eval().map(|x| x.to_string()).unwrap_or("".to_string()),
-                    name_lc: "".to_string(),
+                    display_name: res.eval().map(|x| x.to_string()).unwrap_or("".to_string()),
+                    search_name: "".to_string(),
                 });
             } else if tile.results.is_empty()
                 && let Some(conversions) = unit_conversion::convert_query(&tile.query)
@@ -416,8 +416,8 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
                             )),
                             desc: source,
                             icons: None,
-                            name: target,
-                            name_lc: String::new(),
+                            display_name: target,
+                            search_name: String::new(),
                         }
                     })
                     .collect();
@@ -426,24 +426,24 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
                     open_command: AppCommand::Function(Function::OpenWebsite(tile.query.clone())),
                     desc: "Web Browsing".to_string(),
                     icons: None,
-                    name: "Open Website: ".to_string() + &tile.query,
-                    name_lc: "".to_string(),
+                    display_name: "Open Website: ".to_string() + &tile.query,
+                    search_name: "".to_string(),
                 });
             } else if tile.query_lc.split(' ').count() > 1 {
                 tile.results.push(App {
                     open_command: AppCommand::Function(Function::GoogleSearch(tile.query.clone())),
                     icons: None,
                     desc: "Web Search".to_string(),
-                    name: format!("Search for: {}", tile.query),
-                    name_lc: String::new(),
+                    display_name: format!("Search for: {}", tile.query),
+                    search_name: String::new(),
                 });
             } else if tile.results.is_empty() && tile.query_lc == "lemon" {
                 tile.results.push(App {
                     open_command: AppCommand::Display,
                     desc: "Easter Egg".to_string(),
                     icons: lemon_icon_handle(),
-                    name: "Lemon".to_string(),
-                    name_lc: "".to_string(),
+                    display_name: "Lemon".to_string(),
+                    search_name: "".to_string(),
                 });
             }
             if !tile.query_lc.is_empty() && tile.page == Page::EmojiSearch {

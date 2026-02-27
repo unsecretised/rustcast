@@ -37,16 +37,16 @@ pub struct App {
     pub open_command: AppCommand,
     pub desc: String,
     pub icons: Option<iced::widget::image::Handle>,
-    pub name: String,
-    pub name_lc: String,
+    pub display_name: String,
+    pub search_name: String,
 }
 
 impl PartialEq for App {
     fn eq(&self, other: &Self) -> bool {
-        self.name_lc == other.name_lc
+        self.search_name == other.search_name
             && self.icons == other.icons
             && self.desc == other.desc
-            && self.name == other.name
+            && self.display_name == other.display_name
     }
 }
 
@@ -57,8 +57,8 @@ impl App {
             .filter(|x| x.unicode_version() < emojis::UnicodeVersion::new(17, 13))
             .map(|x| App {
                 icons: None,
-                name: x.to_string(),
-                name_lc: x.name().to_string(),
+                display_name: x.to_string(),
+                search_name: x.name().to_string(),
                 open_command: AppCommand::Function(Function::CopyToClipboard(
                     ClipBoardContentType::Text(x.to_string()),
                 )),
@@ -77,43 +77,43 @@ impl App {
                 open_command: AppCommand::Function(Function::Quit),
                 desc: RUSTCAST_DESC_NAME.to_string(),
                 icons: icons.clone(),
-                name: "Quit RustCast".to_string(),
-                name_lc: "quit".to_string(),
+                display_name: "Quit RustCast".to_string(),
+                search_name: "quit".to_string(),
             },
             App {
                 open_command: AppCommand::Function(Function::OpenPrefPane),
                 desc: RUSTCAST_DESC_NAME.to_string(),
                 icons: icons.clone(),
-                name: "Open RustCast Preferences".to_string(),
-                name_lc: "settings".to_string(),
+                display_name: "Open RustCast Preferences".to_string(),
+                search_name: "settings".to_string(),
             },
             App {
                 open_command: AppCommand::Message(Message::SwitchToPage(Page::EmojiSearch)),
                 desc: RUSTCAST_DESC_NAME.to_string(),
                 icons: icons.clone(),
-                name: "Search for an Emoji".to_string(),
-                name_lc: "emoji".to_string(),
+                display_name: "Search for an Emoji".to_string(),
+                search_name: "emoji".to_string(),
             },
             App {
                 open_command: AppCommand::Message(Message::SwitchToPage(Page::ClipboardHistory)),
                 desc: RUSTCAST_DESC_NAME.to_string(),
                 icons: icons.clone(),
-                name: "Clipboard History".to_string(),
-                name_lc: "clipboard".to_string(),
+                display_name: "Clipboard History".to_string(),
+                search_name: "clipboard".to_string(),
             },
             App {
                 open_command: AppCommand::Message(Message::ReloadConfig),
                 desc: RUSTCAST_DESC_NAME.to_string(),
                 icons: icons.clone(),
-                name: "Reload RustCast".to_string(),
-                name_lc: "refresh".to_string(),
+                display_name: "Reload RustCast".to_string(),
+                search_name: "refresh".to_string(),
             },
             App {
                 open_command: AppCommand::Display,
                 desc: RUSTCAST_DESC_NAME.to_string(),
                 icons: icons.clone(),
-                name: format!("Current RustCast Version: {app_version}"),
-                name_lc: "version".to_string(),
+                display_name: format!("Current RustCast Version: {app_version}"),
+                search_name: "version".to_string(),
             },
         ]
     }
@@ -131,7 +131,7 @@ impl App {
         let text_block = iced::widget::Column::new()
             .spacing(2)
             .push(
-                Text::new(self.name)
+                Text::new(self.display_name)
                     .font(theme.font())
                     .size(16)
                     .wrapping(Wrapping::WordOrGlyph)
