@@ -1,5 +1,7 @@
 //! This has the menubar icon logic for the app
 
+use std::io::Cursor;
+
 use global_hotkey::hotkey::{Code, HotKey, Modifiers};
 use image::{DynamicImage, ImageReader};
 use tray_icon::{
@@ -54,13 +56,11 @@ pub fn menu_icon(hotkey: HotKey, sender: ExtSender) -> TrayIcon {
 }
 
 fn get_image() -> DynamicImage {
-    let image_path = if cfg!(debug_assertions) {
-        "docs/icon.png"
-    } else {
-        "/Applications/Rustcast.app/Contents/Resources/icon.png"
-    };
-
-    ImageReader::open(image_path).unwrap().decode().unwrap()
+    ImageReader::new(Cursor::new(include_bytes!("../../docs/icon.png")))
+        .with_guessed_format()
+        .unwrap()
+        .decode()
+        .unwrap()
 }
 
 fn init_event_handler(sender: ExtSender, hotkey_id: u32) {

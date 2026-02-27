@@ -25,24 +25,24 @@ pub(crate) fn log_error_and_exit(msg: &str) -> ! {
     exit(-1)
 }
 
-/// This converts an icns file to an iced image handle
-pub(crate) fn handle_from_icns(path: &Path) -> Option<Handle> {
-    let data = std::fs::read(path).ok()?;
+pub fn icns_data_to_handle(data: Vec<u8>) -> Option<Handle> {
     let family = IconFamily::read(std::io::Cursor::new(&data)).ok()?;
 
     let icon_type = family.available_icons();
 
     let icon = family.get_icon_with_type(*icon_type.first()?).ok()?;
-    let image = RgbaImage::from_raw(
-        icon.width() as u32,
-        icon.height() as u32,
-        icon.data().to_vec(),
-    )?;
+    let image = RgbaImage::from_raw(icon.width(), icon.height(), icon.data().to_vec())?;
     Some(Handle::from_rgba(
         image.width(),
         image.height(),
         image.into_raw(),
     ))
+}
+
+/// This converts an icns file to an iced image handle
+pub(crate) fn handle_from_icns(path: &Path) -> Option<Handle> {
+    let data = std::fs::read(path).ok()?;
+    icns_data_to_handle(data)
 }
 
 /// Open the settings file with the system default editor

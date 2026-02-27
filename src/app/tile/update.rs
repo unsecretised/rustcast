@@ -1,7 +1,7 @@
 //! This handles the update logic for the tile (AKA rustcast's main window)
 use std::cmp::min;
 use std::fs;
-use std::path::Path;
+use std::io::Cursor;
 use std::thread;
 
 use iced::Task;
@@ -436,9 +436,7 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
                 tile.results.push(App {
                     open_command: AppCommand::Display,
                     desc: "Easter Egg".to_string(),
-                    icons: Some(Handle::from_path(Path::new(
-                        "/Applications/Rustcast.app/Contents/Resources/lemon.png",
-                    ))),
+                    icons: lemon_icon_handle(),
                     name: "Lemon".to_string(),
                     name_lc: "".to_string(),
                 });
@@ -489,4 +487,13 @@ fn open_window(height: f32) -> Task<Message> {
 
 fn single_item_resize_task(id: Id) -> Task<Message> {
     Task::done(Message::ResizeWindow(id, 55. + DEFAULT_WINDOW_HEIGHT))
+}
+
+fn lemon_icon_handle() -> Option<Handle> {
+    image::ImageReader::new(Cursor::new(include_bytes!("../../../docs/lemon.png")))
+        .with_guessed_format()
+        .unwrap()
+        .decode()
+        .ok()
+        .map(|img| Handle::from_rgba(img.width(), img.height(), img.into_bytes()))
 }

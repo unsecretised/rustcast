@@ -1,7 +1,6 @@
 //! This modules handles the logic for each "app" that rustcast can load
 //!
 //! An "app" is effectively, one of the results that rustcast returns when you search for something
-use std::path::Path;
 
 use iced::{
     Alignment,
@@ -14,8 +13,10 @@ use crate::{
     clipboard::ClipBoardContentType,
     commands::Function,
     styles::{result_button_style, result_row_container_style},
-    utils::handle_from_icns,
+    utils::icns_data_to_handle,
 };
+
+pub const ICNS_ICON: &[u8] = include_bytes!("../../docs/icon.icns");
 
 /// This tells each "App" what to do when it is clicked, whether it is a function, a message, or a display
 #[allow(dead_code)]
@@ -69,58 +70,48 @@ impl App {
     pub fn basic_apps() -> Vec<App> {
         let app_version = option_env!("APP_VERSION").unwrap_or("Unknown Version");
 
+        let icons = icns_data_to_handle(ICNS_ICON.to_vec());
+
         vec![
             App {
                 open_command: AppCommand::Function(Function::Quit),
                 desc: RUSTCAST_DESC_NAME.to_string(),
-                icons: handle_from_icns(Path::new(
-                    "/Applications/Rustcast.app/Contents/Resources/icon.icns",
-                )),
+                icons: icons.clone(),
                 name: "Quit RustCast".to_string(),
                 name_lc: "quit".to_string(),
             },
             App {
                 open_command: AppCommand::Function(Function::OpenPrefPane),
                 desc: RUSTCAST_DESC_NAME.to_string(),
-                icons: handle_from_icns(Path::new(
-                    "/Applications/Rustcast.app/Contents/Resources/icon.icns",
-                )),
+                icons: icons.clone(),
                 name: "Open RustCast Preferences".to_string(),
                 name_lc: "settings".to_string(),
             },
             App {
                 open_command: AppCommand::Message(Message::SwitchToPage(Page::EmojiSearch)),
                 desc: RUSTCAST_DESC_NAME.to_string(),
-                icons: handle_from_icns(Path::new(
-                    "/Applications/Rustcast.app/Contents/Resources/icon.icns",
-                )),
+                icons: icons.clone(),
                 name: "Search for an Emoji".to_string(),
                 name_lc: "emoji".to_string(),
             },
             App {
                 open_command: AppCommand::Message(Message::SwitchToPage(Page::ClipboardHistory)),
                 desc: RUSTCAST_DESC_NAME.to_string(),
-                icons: handle_from_icns(Path::new(
-                    "/Applications/Rustcast.app/Contents/Resources/icon.icns",
-                )),
+                icons: icons.clone(),
                 name: "Clipboard History".to_string(),
                 name_lc: "clipboard".to_string(),
             },
             App {
                 open_command: AppCommand::Message(Message::ReloadConfig),
                 desc: RUSTCAST_DESC_NAME.to_string(),
-                icons: handle_from_icns(Path::new(
-                    "/Applications/Rustcast.app/Contents/Resources/icon.icns",
-                )),
+                icons: icons.clone(),
                 name: "Reload RustCast".to_string(),
                 name_lc: "refresh".to_string(),
             },
             App {
                 open_command: AppCommand::Display,
                 desc: RUSTCAST_DESC_NAME.to_string(),
-                icons: handle_from_icns(Path::new(
-                    "/Applications/Rustcast.app/Contents/Resources/icon.icns",
-                )),
+                icons: icons.clone(),
                 name: format!("Current RustCast Version: {app_version}"),
                 name_lc: "version".to_string(),
             },
