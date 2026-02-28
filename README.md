@@ -34,6 +34,7 @@
 **Community:** https://discord.gg/bDfNYPbnC5
 
 ![RustCast Demo PreRelease V1](./docs/rustcast-v0-5-0.png)
+
 ## Installation:
 
 ### Via Homebrew:
@@ -99,11 +100,13 @@ will be fixed in the upcoming releases
 - [x] Calculator (27/12/2025)
 - [x] Clipboard History (29/12/2025) This works by typing `cbhist` to enter the
       cliboard history page, which allows u to access your clipboard history,
-- [x] Blur / transparent background (7/1/2026) 
+- [x] Blur / transparent background (7/1/2026)
 - [x] Select the options using arrow keys
 - [x] Tray icons (8/1/2026)
-- [x] Unit Conversions (19/1/2026) thanks to [Hriztam](https://github.com/hriztam)
-- [x] Emoji Searching (19/1/2026) Allows people to search for emojis through rustcast
+- [x] Unit Conversions (19/1/2026) thanks to
+      [Hriztam](https://github.com/hriztam)
+- [x] Emoji Searching (19/1/2026) Allows people to search for emojis through
+      rustcast
 
 ### Planned:
 
@@ -117,8 +120,9 @@ will be fixed in the upcoming releases
       [Puppeteer](https://pptr.dev/)
 
 ### Not planned:
-- [ ] Cross platform support 
-    Cancelled for now, as  not within my ability to support and maintain it
+
+- [ ] Cross platform support Cancelled for now, as not within my ability to
+      support and maintain it
 
 ## RustCast wouldn't be possible without these people:
 
@@ -131,7 +135,8 @@ will be fixed in the upcoming releases
   Discord Nitro
 - [Julie / Zoey](https://github.com/zoey-on-github) - Gave me amazing feedback
   and has been using RustCast since almost the first version!
-- [Hriztam](https://github.com/hriztam) - Added support for unit conversions to rustcast
+- [Hriztam](https://github.com/hriztam) - Added support for unit conversions to
+  rustcast
 
 All the people who starred my repo!!
 
