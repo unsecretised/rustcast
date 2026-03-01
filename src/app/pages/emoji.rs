@@ -1,6 +1,11 @@
 use iced::{Border, Length::Fill, border::Radius, widget::tooltip};
 
-use crate::{app::pages::prelude::*, clipboard::ClipBoardContentType, commands::Function};
+use crate::{
+    app::pages::prelude::*,
+    clipboard::ClipBoardContentType,
+    commands::Function,
+    styles::{glass_border, glass_surface, with_alpha},
+};
 
 pub fn emoji_page(
     tile_theme: Theme,
@@ -65,21 +70,25 @@ pub fn emoji_page(
     }
 
     let tile_theme_clone = tile_theme.clone();
-
     container(Column::from_vec(column).spacing(10))
-        .padding(5)
-        .style(move |_| {
-            result_row_container_style(&tile_theme_clone, false)
-                .background({
-                    let mut clr = tile_theme_clone.bg_color();
-                    clr.a = 1.;
-                    Background::Color(tint(clr, 0.02))
-                })
-                .border(Border {
-                    color: tile_theme.bg_color(),
-                    width: 1.,
-                    radius: Radius::new(0),
-                })
+        .padding(10)
+        .style(move |_| container::Style {
+            background: Some(Background::Color(glass_surface(
+                tile_theme_clone.bg_color(),
+                false,
+            ))),
+            text_color: None,
+            border: Border {
+                color: glass_border(tile_theme_clone.text_color(1.0), false),
+                width: 0.5,
+                radius: Radius::new(14.0).top(0),
+            },
+            shadow: iced::Shadow {
+                color: with_alpha(iced::Color::TRANSPARENT, 0.),
+                offset: iced::Vector::new(0.0, 10.0),
+                blur_radius: 28.0,
+            },
+            snap: false,
         })
         .center_x(WINDOW_WIDTH)
         .into()
