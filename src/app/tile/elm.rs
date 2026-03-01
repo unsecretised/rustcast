@@ -17,7 +17,7 @@ use crate::app::DEFAULT_WINDOW_HEIGHT;
 use crate::app::pages::emoji::emoji_page;
 use crate::app::tile::{AppIndex, Hotkeys};
 use crate::config::Theme;
-use crate::styles::{contents_style, rustcast_text_input_style, tint, with_alpha};
+use crate::styles::{contents_style, glass_border, glass_surface, rustcast_text_input_style};
 use crate::{app::WINDOW_WIDTH, platform};
 use crate::{app::pages::clipboard::clipboard_view, platform::get_installed_apps};
 use crate::{
@@ -180,18 +180,24 @@ pub fn view(tile: &Tile, wid: window::Id) -> Element<'_, Message> {
 }
 
 fn footer(theme: Theme, results_count: usize) -> Element<'static, Message> {
-    let text = if results_count == 0 {
+    if results_count == 0 {
         return space().into();
-    } else if results_count == 1 {
-        "1 result found"
+    }
+
+    let text = if results_count == 1 {
+        "1 result found".to_string()
     } else {
-        &format!("{} results found", results_count)
+        format!("{results_count} results found")
     };
+
+    // “Liquid glass” parameters (match your other styles)
+    let focused = false;
+    let radius = 15.0;
 
     container(
         Row::new()
             .push(
-                Text::new(text.to_string())
+                Text::new(text)
                     .size(12)
                     .height(30)
                     .color(theme.text_color(0.7))
@@ -207,15 +213,16 @@ fn footer(theme: Theme, results_count: usize) -> Element<'static, Message> {
     .padding(5)
     .style(move |_| container::Style {
         text_color: None,
-        background: Some(iced::Background::Color(with_alpha(
-            tint(theme.bg_color(), 0.04),
-            1.0,
+        background: Some(iced::Background::Color(glass_surface(
+            theme.bg_color(),
+            focused,
         ))),
         border: iced::Border {
-            color: Color::WHITE,
-            width: 0.,
-            radius: Radius::new(15).top(0),
+            color: glass_border(theme.text_color(1.0), focused),
+            width: 1.0,
+            radius: Radius::new(radius).top(0.0),
         },
+
         shadow: iced::Shadow {
             color: Color::TRANSPARENT,
             offset: Vector::ZERO,
