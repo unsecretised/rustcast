@@ -14,6 +14,7 @@ use log::info;
 use rayon::slice::ParallelSliceMut;
 
 use crate::app::ToApp;
+use crate::app::ToApps;
 use crate::app::WINDOW_WIDTH;
 use crate::app::apps::App;
 use crate::app::apps::AppCommand;
@@ -45,13 +46,14 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
         Message::SwitchMode(mode) => {
             if let Some(command) = tile.config.modes.get(mode.trim()) {
                 tile.current_mode = mode.clone();
-                info!("switched mode");
+                info!("Switched mode");
                 Task::done(Message::RunFunction(Function::RunShellCommand(
                     command.to_owned(),
                 )))
             } else {
-                info!("no presentation found");
-                Task::none()
+                info!("Switching to default mode");
+                tile.current_mode = "default".to_string();
+                window::latest().map(|x| Message::HideWindow(x.unwrap()))
             }
         }
 
@@ -67,7 +69,7 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
         Message::SetSender(sender) => {
             tile.sender = Some(sender.clone());
             if tile.config.show_trayicon {
-                tile.tray_icon = Some(menu_icon(tile.hotkeys.toggle, sender));
+                tile.tray_icon = Some(menu_icon(tile.config.clone(), sender));
             }
             Task::none()
         }
@@ -231,6 +233,7 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
 
             let mut new_options = get_installed_apps(new_config.theme.show_icons);
             new_options.extend(new_config.shells.iter().map(|x| x.to_app()));
+            new_options.extend(new_config.modes.to_apps());
             new_options.extend(App::basic_apps());
             new_options.par_sort_by_key(|x| x.display_name.len());
 

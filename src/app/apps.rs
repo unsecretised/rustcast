@@ -93,6 +93,14 @@ impl App {
             },
             App {
                 ranking: 0,
+                open_command: AppCommand::Message(Message::SwitchMode("Default".to_string())),
+                desc: "Change mode".to_string(),
+                icons: icons.clone(),
+                display_name: "Default mode".to_string(),
+                search_name: "default".to_string(),
+            },
+            App {
+                ranking: 0,
                 open_command: AppCommand::Message(Message::SwitchToPage(Page::EmojiSearch)),
                 desc: RUSTCAST_DESC_NAME.to_string(),
                 icons: icons.clone(),

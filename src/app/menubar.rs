@@ -1,6 +1,6 @@
 //! This has the menubar icon logic for the app
 
-use std::io::Cursor;
+use std::{collections::HashMap, io::Cursor};
 
 use global_hotkey::hotkey::{Code, HotKey, Modifiers};
 use image::{DynamicImage, ImageReader};
@@ -8,13 +8,14 @@ use log::info;
 use tray_icon::{
     Icon, TrayIcon, TrayIconBuilder,
     menu::{
-        AboutMetadataBuilder, Icon as Ico, Menu, MenuEvent, MenuItem, PredefinedMenuItem,
-        accelerator::Accelerator,
+        AboutMetadataBuilder, Icon as Ico, IsMenuItem, Menu, MenuEvent, MenuItem,
+        PredefinedMenuItem, Submenu, accelerator::Accelerator,
     },
 };
 
 use crate::{
     app::{Message, tile::ExtSender},
+    config::Config,
     utils::{open_settings, open_url},
 };
 
@@ -23,8 +24,12 @@ const DISCORD_LINK: &str = "https://discord.gg/bDfNYPbnC5";
 use tokio::runtime::Runtime;
 
 /// This create a new menubar icon for the app
-pub fn menu_icon(hotkey: HotKey, sender: ExtSender) -> TrayIcon {
+pub fn menu_icon(config: Config, sender: ExtSender) -> TrayIcon {
+    let hotkey = config.toggle_hotkey.parse::<HotKey>().unwrap();
     let builder = TrayIconBuilder::new();
+
+    let mut modes = config.modes;
+    modes.insert("Default".to_string(), "default".to_string());
 
     let image = get_image();
     let icon = Icon::from_rgba(image.as_bytes().to_vec(), image.width(), image.height()).unwrap();
@@ -38,6 +43,7 @@ pub fn menu_icon(hotkey: HotKey, sender: ExtSender) -> TrayIcon {
         &PredefinedMenuItem::separator(),
         &refresh_item(),
         &open_item(hotkey),
+        &mode_item(modes),
         &PredefinedMenuItem::separator(),
         &open_issue_item(),
         &get_help_item(),
@@ -104,7 +110,19 @@ fn init_event_handler(sender: ExtSender, hotkey_id: u32) {
             "open_github_page" => {
                 open_url("https://github.com/unsecretised/rustcast");
             }
-            _ => {}
+            id => {
+                if id.starts_with("mode_switch_") {
+                    let id = id.to_string();
+                    runtime.spawn(async move {
+                        sender
+                            .clone()
+                            .try_send(Message::SwitchMode(
+                                id.strip_prefix("mode_switch_").unwrap_or("").to_string(),
+                            ))
+                            .unwrap();
+                    });
+                }
+            }
         }
     }));
 }
@@ -120,6 +138,24 @@ fn discord_item() -> MenuItem {
 
 fn hide_tray_icon() -> MenuItem {
     MenuItem::with_id("hide_tray_icon", "Hide Tray Icon", true, None)
+}
+
+fn mode_item(modes: HashMap<String, String>) -> Submenu {
+    let owned_items: Vec<MenuItem> = modes
+        .keys()
+        .map(|key| {
+            MenuItem::with_id(
+                format!("mode_switch_{}", key), // id uses the key
+                format!("{}{}", key.split_at(1).0.to_uppercase(), key.split_at(1).1),
+                true,
+                None,
+            )
+        })
+        .collect();
+
+    let items: Vec<&dyn IsMenuItem> = owned_items.iter().map(|x| x as &dyn IsMenuItem).collect();
+
+    Submenu::with_items("Modes", true, &items).unwrap()
 }
 
 fn open_item(hotkey: HotKey) -> MenuItem {

@@ -62,7 +62,7 @@ pub fn new(hotkey: HotKey, config: &Config) -> (Tile, Task<Message>) {
 
     (
         Tile {
-            current_mode: "".to_string(),
+            current_mode: "Default".to_string(),
             query: String::new(),
             query_lc: String::new(),
             focus_id: 0,
@@ -161,7 +161,11 @@ pub fn view(tile: &Tile, wid: window::Id) -> Element<'_, Message> {
             Column::new()
                 .push(title_input)
                 .push(scrollable)
-                .push(footer(tile.config.theme.clone(), results_count))
+                .push(footer(
+                    tile.config.theme.clone(),
+                    results_count,
+                    tile.current_mode.clone(),
+                ))
                 .spacing(0),
         )
         .style(|_| container::Style {
@@ -183,7 +187,7 @@ pub fn view(tile: &Tile, wid: window::Id) -> Element<'_, Message> {
     }
 }
 
-fn footer(theme: Theme, results_count: usize) -> Element<'static, Message> {
+fn footer(theme: Theme, results_count: usize, current_mode: String) -> Element<'static, Message> {
     if results_count == 0 {
         return space().into();
     }
@@ -198,6 +202,11 @@ fn footer(theme: Theme, results_count: usize) -> Element<'static, Message> {
     let focused = false;
     let radius = 15.0;
 
+    let current_mode = format!(
+        "{}{} Mode",
+        current_mode.split_at(1).0.to_uppercase(),
+        current_mode.split_at(1).1
+    );
     container(
         Row::new()
             .push(
@@ -207,6 +216,15 @@ fn footer(theme: Theme, results_count: usize) -> Element<'static, Message> {
                     .color(theme.text_color(0.7))
                     .font(theme.font())
                     .align_x(Alignment::Center),
+            )
+            .push(
+                Text::new(current_mode)
+                    .size(12)
+                    .height(30)
+                    .color(theme.text_color(0.7))
+                    .font(theme.font())
+                    .width(Fill)
+                    .align_x(Alignment::End),
             )
             .padding(4)
             .width(Fill)
