@@ -13,6 +13,7 @@ use iced::window::Id;
 use log::info;
 use rayon::slice::ParallelSliceMut;
 
+use crate::app::ToApp;
 use crate::app::WINDOW_WIDTH;
 use crate::app::apps::App;
 use crate::app::apps::AppCommand;
@@ -40,6 +41,20 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
             tile.visible = true;
             Task::none()
         }
+
+        Message::SwitchMode(mode) => {
+            if let Some(command) = tile.config.modes.get(mode.trim()) {
+                tile.current_mode = mode.clone();
+                info!("switched mode");
+                Task::done(Message::RunFunction(Function::RunShellCommand(
+                    command.to_owned(),
+                )))
+            } else {
+                info!("no presentation found");
+                Task::none()
+            }
+        }
+
         Message::HideTrayIcon => {
             tile.tray_icon = None;
             tile.config.show_trayicon = false;
@@ -275,7 +290,7 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
         }
 
         Message::RunFunction(command) => {
-            command.execute(&tile.config, &tile.query);
+            command.execute(&tile.config);
 
             let return_focus_task = match &command {
                 Function::OpenApp(_) | Function::OpenPrefPane | Function::GoogleSearch(_) => {

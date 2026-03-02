@@ -1,11 +1,14 @@
 //! This is the config file type definitions for rustcast
-use std::{path::Path, sync::Arc};
+use std::{collections::HashMap, path::Path, sync::Arc};
 
 use iced::{Font, font::Family, theme::Custom, widget::image::Handle};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    app::apps::{App, AppCommand},
+    app::{
+        ToApp,
+        apps::{App, AppCommand},
+    },
     commands::Function,
     utils::handle_from_icns,
 };
@@ -23,6 +26,7 @@ pub struct Config {
     pub haptic_feedback: bool,
     pub show_trayicon: bool,
     pub shells: Vec<Shelly>,
+    pub modes: HashMap<String, String>,
     pub log_path: String,
 }
 
@@ -39,6 +43,7 @@ impl Default for Config {
             haptic_feedback: false,
             show_trayicon: true,
             log_path: "/tmp/rustcast.log".to_string(),
+            modes: HashMap::new(),
             shells: vec![],
         }
     }
@@ -173,9 +178,8 @@ pub struct Shelly {
     alias_lc: String,
 }
 
-impl Shelly {
-    /// Converts the shelly struct to an app so that it can be added to the app list
-    pub fn to_app(&self) -> App {
+impl ToApp for Shelly {
+    fn to_app(&self) -> App {
         let self_clone = self.clone();
         let icon = self_clone.icon_path.and_then(|x| {
             let x = x.replace("~", &std::env::var("HOME").unwrap());
@@ -187,10 +191,7 @@ impl Shelly {
         });
         App {
             ranking: 0,
-            open_command: AppCommand::Function(Function::RunShellCommand(
-                self_clone.command,
-                self_clone.alias_lc.clone(),
-            )),
+            open_command: AppCommand::Function(Function::RunShellCommand(self_clone.command)),
             desc: "Shell Command".to_string(),
             icons: icon,
             display_name: self_clone.alias,

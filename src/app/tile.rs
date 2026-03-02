@@ -102,6 +102,7 @@ pub struct Tile {
     pub theme: iced::Theme,
     pub focus_id: u32,
     pub query: String,
+    pub current_mode: String,
     query_lc: String,
     results: Vec<App>,
     options: AppIndex,
@@ -354,7 +355,7 @@ fn handle_clipboard_history() -> impl futures::Stream<Item = Message> {
                     .ok();
                 prev_byte_rep = byte_rep;
             }
-            tokio::time::sleep(Duration::from_millis(10)).await;
+            tokio::time::sleep(Duration::from_millis(100)).await;
         }
     })
 }

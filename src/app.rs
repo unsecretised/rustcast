@@ -1,4 +1,7 @@
 //! Main logic for the app
+use std::collections::HashMap;
+
+use crate::app::apps::App;
 use crate::commands::Function;
 use crate::{app::tile::ExtSender, clipboard::ClipBoardContentType};
 
@@ -59,6 +62,7 @@ pub enum Message {
     WindowFocusChanged(Id, bool),
     ClearSearchQuery,
     HideTrayIcon,
+    SwitchMode(String),
     ReloadConfig,
     SetSender(ExtSender),
     SwitchToPage(Page),
@@ -80,5 +84,28 @@ pub fn default_settings() -> Settings {
             height: DEFAULT_WINDOW_HEIGHT,
         },
         ..Default::default()
+    }
+}
+
+pub trait ToApp {
+    fn to_app(&self) -> App;
+}
+
+pub trait ToApps {
+    fn to_apps(&self) -> Vec<App>;
+}
+
+impl ToApps for HashMap<String, String> {
+    fn to_apps(&self) -> Vec<App> {
+        self.keys()
+            .map(|key| App {
+                ranking: 0,
+                open_command: apps::AppCommand::Message(Message::SwitchMode(key.trim().to_owned())),
+                search_name: key.to_owned(),
+                desc: "Switch Modes".to_string(),
+                icons: None,
+                display_name: format!("Switch mode to: {}", key.trim()),
+            })
+            .collect()
     }
 }

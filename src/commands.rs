@@ -12,7 +12,7 @@ use crate::{calculator::Expr, clipboard::ClipBoardContentType, config::Config};
 #[derive(Debug, Clone, PartialEq)]
 pub enum Function {
     OpenApp(String),
-    RunShellCommand(String, String),
+    RunShellCommand(String),
     OpenWebsite(String),
     RandomVar(i32), // Easter egg function
     CopyToClipboard(ClipBoardContentType),
@@ -24,7 +24,7 @@ pub enum Function {
 
 impl Function {
     /// Run the command
-    pub fn execute(&self, config: &Config, query: &str) {
+    pub fn execute(&self, config: &Config) {
         match self {
             Function::OpenApp(path) => {
                 let path = path.to_owned();
@@ -34,13 +34,10 @@ impl Function {
                     ));
                 });
             }
-            Function::RunShellCommand(command, alias) => {
-                let query = query.to_string();
-                let final_command =
-                    format!(r#"{} {}"#, command, query.strip_prefix(alias).unwrap_or(""));
+            Function::RunShellCommand(command) => {
                 Command::new("sh")
                     .arg("-c")
-                    .arg(final_command.trim())
+                    .arg(format!("\"{}\"", command))
                     .spawn()
                     .ok();
             }

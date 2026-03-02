@@ -1,3 +1,5 @@
+#![deny(clippy::dbg_macro)]
+
 mod app;
 mod calculator;
 mod clipboard;

@@ -13,9 +13,9 @@ use iced::{Length::Fill, widget::text_input};
 use log::info;
 use rayon::slice::ParallelSliceMut;
 
-use crate::app::DEFAULT_WINDOW_HEIGHT;
 use crate::app::pages::emoji::emoji_page;
 use crate::app::tile::{AppIndex, Hotkeys};
+use crate::app::{DEFAULT_WINDOW_HEIGHT, ToApp, ToApps};
 use crate::config::Theme;
 use crate::styles::{contents_style, glass_border, glass_surface, rustcast_text_input_style};
 use crate::{app::WINDOW_WIDTH, platform};
@@ -44,6 +44,9 @@ pub fn new(hotkey: HotKey, config: &Config) -> (Tile, Task<Message>) {
     options.extend(config.shells.iter().map(|x| x.to_app()));
     info!("Loaded shell commands");
 
+    options.extend(config.modes.to_apps());
+    info!("Loaded modes");
+
     options.extend(App::basic_apps());
     info!("Loaded basic apps / default apps");
     options.par_sort_by_key(|x| x.display_name.len());
@@ -59,6 +62,7 @@ pub fn new(hotkey: HotKey, config: &Config) -> (Tile, Task<Message>) {
 
     (
         Tile {
+            current_mode: "".to_string(),
             query: String::new(),
             query_lc: String::new(),
             focus_id: 0,
@@ -70,7 +74,7 @@ pub fn new(hotkey: HotKey, config: &Config) -> (Tile, Task<Message>) {
             frontmost: None,
             focused: false,
             config: config.clone(),
-            theme: config.theme.to_owned().into(),
+            theme: config.theme.to_owned().clone().into(),
             clipboard_content: vec![],
             tray_icon: None,
             sender: None,
