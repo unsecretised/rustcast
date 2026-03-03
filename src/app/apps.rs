@@ -2,10 +2,16 @@
 //!
 //! An "app" is effectively, one of the results that rustcast returns when you search for something
 
+use std::io::Cursor;
+
 use iced::{
     Alignment,
     Length::Fill,
-    widget::{Button, Row, Text, container, image::Viewer, text::Wrapping},
+    widget::{
+        Button, Row, Text, container,
+        image::{Handle, Viewer},
+        text::Wrapping,
+    },
 };
 
 use crate::{
@@ -74,7 +80,25 @@ impl App {
 
         let icons = icns_data_to_handle(ICNS_ICON.to_vec());
 
+        let ferris_handle =
+            image::ImageReader::new(Cursor::new(include_bytes!("../../docs/ferris_rs.png")))
+                .with_guessed_format()
+                .unwrap()
+                .decode()
+                .ok()
+                .map(|img| Handle::from_rgba(img.width(), img.height(), img.into_bytes()));
+
         vec![
+            App {
+                ranking: 0,
+                open_command: AppCommand::Function(Function::OpenWebsite(
+                    "https://ferris.rs".to_string(),
+                )),
+                icons: ferris_handle,
+                desc: "Easter Egg".to_string(),
+                display_name: "Ferris Plushies".to_string(),
+                search_name: "ferris.rs".to_string(),
+            },
             App {
                 ranking: 0,
                 open_command: AppCommand::Function(Function::Quit),
