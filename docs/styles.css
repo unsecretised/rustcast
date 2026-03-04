@@ -919,3 +919,46 @@ footer {
   background: var(--surface);
   border-radius: 2px;
 }
+/* VIDEO */
+.video-section {
+  width: min(1100px, calc(100% - 3rem));
+  margin: 0 auto;
+  padding: 5rem 0;
+}
+
+.video-header {
+  text-align: center;
+  margin: 0 auto 2rem;
+  max-width: 760px;
+}
+
+/* 16:9 responsive embed */
+.video-embed {
+  position: relative;
+  width: 500px;
+  margin: 2rem auto 0;
+  aspect-ratio: 16 / 9;
+
+  border-radius: 18px;
+  overflow: hidden;
+
+  /* Subtle panel look; uses your existing theme vars if present */
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+  margin-bottom: 40px;
+}
+
+.video-embed video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.video-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 1.5rem;
+}
