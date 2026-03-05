@@ -2,6 +2,10 @@
 name = "rustcast"
 version = "0.6.0"
 edition = "2024"
+license = "MIT"
+description = "RustCast - Productivity app for macOS"
+homepage = "https://rustcast.app"
+repository = "https://github.com/unsecretised/rustcast"
 
 [dependencies]
 anyhow = "1.0.100"
