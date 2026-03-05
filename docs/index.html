@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>RustCast - Open Source Raycast Alternative</title>
+    <title>RustCast - Open Source Multi Tool Popup Window</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="icon" href="icon.png" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -72,89 +72,120 @@
     </section>
     <div class="divider"></div>
 
-    <!-- FEATURES -->
     <section id="features">
-      <div class="features-section">
-        <div class="features-header">
-          <div class="section-label">// features</div>
-          <h2>Everything you need.<br />Nothing you don't.</h2>
-          <p class="section-desc">
-            RustCast packs a full productivity toolkit into a single hotkey.
-            Zero subscriptions, zero telemetry.
-          </p>
-        </div>
-        <div class="features-grid">
-          <div class="feature-card">
-            <div class="feature-title">App Launcher</div>
-            <p class="feature-desc">
+      <div class="features-stacked">
+        <div class="section-label">// features</div>
+        <h2>Everything you need.<br />Nothing you don't.</h2>
+        <p class="section-desc">
+          RustCast packs a full productivity toolkit into a single hotkey. Zero
+          subscriptions, zero telemetry.
+        </p>
+
+        <!-- 1: text left, media right -->
+        <article class="feature-split">
+          <div class="feature-copy">
+            <h3>App Launcher</h3>
+            <p>
               Instantly search and open any installed app. Faster than
               Spotlight, keyboard-only by design.
             </p>
           </div>
-          <div class="feature-card">
-            <div class="feature-title">Calculator</div>
-            <p class="feature-desc">
-              Type any expression and see the result inline. No need to open a
-              separate app ever again.
+          <div class="feature-media">
+            <!-- Drop image OR video here -->
+            <!-- Example image: -->
+            <img src="rustcast-latest-demo.png" alt="App Launcher demo" />
+
+            <!-- Example video: -->
+          </div>
+        </article>
+
+        <!-- 2: media left, text right -->
+        <article class="feature-split feature-split--reverse">
+          <div class="feature-copy">
+            <h3>Calculator</h3>
+            <p>Type any expression and see the result inline.</p>
+          </div>
+          <div class="feature-media">
+            <img src="rustcast_calc.png" alt="Calculator demo" />
+          </div>
+        </article>
+
+        <!-- 3 -->
+        <article class="feature-split">
+          <div class="feature-copy">
+            <h3>Clipboard History</h3>
+            <p>
+              Access your full clipboard history from a keyboard shortcut
             </p>
           </div>
-          <div class="feature-card">
-            <div class="feature-title">Clipboard History</div>
-            <p class="feature-desc">
-              Access your full clipboard history from a keyboard shortcut or by
-              typing <code
-                style="color: var(--rust); font-size: 0.75rem"
-              >cbhist</code>. Everything you've copied, always available.
+          <div class="feature-media">
+            <img src="rustcast_cbhist.png" alt="App Launcher demo" />
+          </div>
+        </article>
+        <article class="feature-split feature-split--reverse">
+          <div class="feature-copy">
+            <h3>Customisable Themes</h3>
+            <p>Configure the fonts and colors to your liking</p>
+          </div>
+          <div class="feature-media">
+            <img src="rustcast_theming.png" alt="App Launcher demo" />
+          </div>
+        </article>
+        <!-- 5 -->
+        <article class="feature-split">
+          <div class="feature-copy">
+            <h3>Quick Web Search</h3>
+            <p>
+              Type your query and add <code>?</code> to instantly search Google
+              (or any custom search engine).
             </p>
           </div>
-          <div class="feature-card">
-            <div class="feature-title">Spotify Control</div>
-            <p class="feature-desc">
-              Play, pause, skip tracks and control volume — all from the
-              launcher without switching windows.
-            </p>
+          <div class="feature-media">
+            <video src="rustcast_demo_2.mp4" controls loop muted playsinline>
+            </video>
           </div>
-          <div class="feature-card">
-            <div class="feature-title">Quick Web Search</div>
-            <p class="feature-desc">
-              Type your query and add <code
-                style="color: var(--rust); font-size: 0.75rem"
-              >?</code> to instantly search Google (or any custom search
-              engine).
-            </p>
+        </article>
+
+        <!-- 6 -->
+        <article class="feature-split feature-split--reverse">
+          <div class="feature-copy">
+            <h3>Unit Conversions</h3>
+            <p>Convert between units right from the search bar.</p>
           </div>
-          <div class="feature-card">
-            <div class="feature-title">Unit Conversions</div>
-            <p class="feature-desc">
-              Convert between units right from the search bar. Length, weight,
-              temperature — handled instantly.
-            </p>
+          <div class="feature-media">
+            <video src="rustcast_demo_unit.mp4" loop muted playsinline controls>
+            </video>
           </div>
-          <div class="feature-card">
-            <div class="feature-title">Emoji Search</div>
-            <p class="feature-desc">
-              Find and copy any emoji by name. Never dig through the character
-              picker again.
-            </p>
+        </article>
+
+        <!-- 7 -->
+        <article class="feature-split">
+          <div class="feature-copy">
+            <h3>Emoji Search</h3>
+            <p>Find and copy any emoji by name.</p>
           </div>
-          <div class="feature-card">
-            <div class="feature-title">Custom Shell Scripts</div>
-            <p class="feature-desc">
+          <div class="feature-media">
+            <img src="rustcast_emoji.png" alt="App Launcher demo" />
+          </div>
+        </article>
+
+        <!-- 8 -->
+        <article class="feature-split feature-split--reverse">
+          <div class="feature-copy">
+            <h3>Custom Shell Scripts</h3>
+            <p>
               Define shell aliases and run any command directly from the
-              launcher. Full system access.
+              launcher.
             </p>
           </div>
-          <div class="feature-card">
-            <div class="feature-title">Customisable Themes</div>
-            <p class="feature-desc">
-              Configure fonts, colors, background opacity, blur — everything.
-              Use any font from your Font Book.
-            </p>
+          <div class="feature-media">
+            <img src="rustcast_shell_command.png" alt="App Launcher demo" />
           </div>
-        </div>
+        </article>
+
+        <!-- 9 -->
       </div>
     </section>
-
     <div class="divider"></div>
 
     <!-- MODES -->
@@ -298,9 +329,6 @@
         <div id="tab-brew" class="install-block active">
           <div class="install-block-bar">
             <span class="install-block-title">Terminal</span>
-            <button class="copy-btn" onclick="copyCode('brew-code')">
-              copy
-            </button>
           </div>
           <div class="install-code" id="brew-code">
             <span class="comment"># Tap the cask and install</span><br>
@@ -323,9 +351,6 @@
         <div id="tab-build" class="install-block">
           <div class="install-block-bar">
             <span class="install-block-title">Terminal</span>
-            <button class="copy-btn" onclick="copyCode('build-code')">
-              copy
-            </button>
           </div>
           <div class="install-code" id="build-code">
             <span class="cmd">git clone</span>
@@ -465,51 +490,6 @@
         document.getElementById("tab-" + tab).classList.add("active");
         event.target.classList.add("active");
       }
-
-      function copyCode(id) {
-        const el = document.getElementById(id);
-        const text = el.innerText.replace(/^#.*/gm, "").trim().split(
-          "\n",
-        ).filter((l) => l.trim()).join("\n");
-        navigator.clipboard.writeText(text).then(() => {
-          const btn = event.target;
-          btn.textContent = "copied!";
-          setTimeout(() => btn.textContent = "copy", 1500);
-        });
-      }
-
-      // Typing animation for demo
-      const input = document.querySelector(".search-input");
-      const phrases = [
-        "spotify",
-        "cbhist",
-        "2+2*10",
-        "15 kg in lbs",
-        "> echo hello",
-      ];
-      let pi = 0, ci = 0, deleting = false;
-
-      function type() {
-        const phrase = phrases[pi];
-        if (!deleting) {
-          input.value = phrase.slice(0, ++ci);
-          if (ci === phrase.length) {
-            deleting = true;
-            setTimeout(type, 1400);
-            return;
-          }
-        } else {
-          input.value = phrase.slice(0, --ci);
-          if (ci === 0) {
-            deleting = false;
-            pi = (pi + 1) % phrases.length;
-            setTimeout(type, 300);
-            return;
-          }
-        }
-        setTimeout(type, deleting ? 60 : 90);
-      }
-      setTimeout(type, 1800);
     </script>
   </body>
 </html>
