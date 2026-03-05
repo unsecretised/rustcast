@@ -172,22 +172,26 @@ impl Tile {
                             return Some(Message::KeyPressed(65598));
                         }
                         keyboard::Key::Named(Named::ArrowUp) => {
-                            return Some(Message::ChangeFocus(ArrowKey::Up));
+                            return Some(Message::ChangeFocus(ArrowKey::Up, 1));
                         }
                         keyboard::Key::Named(Named::ArrowLeft) => {
-                            return Some(Message::ChangeFocus(ArrowKey::Left));
+                            return Some(Message::ChangeFocus(ArrowKey::Left, 1));
                         }
                         keyboard::Key::Named(Named::ArrowRight) => {
-                            return Some(Message::ChangeFocus(ArrowKey::Right));
+                            return Some(Message::ChangeFocus(ArrowKey::Right, 1));
                         }
                         keyboard::Key::Named(Named::ArrowDown) => {
-                            return Some(Message::ChangeFocus(ArrowKey::Down));
+                            return Some(Message::ChangeFocus(ArrowKey::Down, 1));
                         }
                         keyboard::Key::Character(chr) => {
-                            if modifiers.command() && chr.to_string().to_lowercase() == "r" {
+                            if modifiers.command() && chr.to_string() == "r" {
                                 return Some(Message::ReloadConfig);
                             } else if modifiers.command() && chr.to_string() == "," {
                                 open_settings();
+                            } else if chr.to_string() == "p" && modifiers.control() {
+                                return Some(Message::ChangeFocus(ArrowKey::Up, 3));
+                            } else if chr.to_string() == "n" && modifiers.control() {
+                                return Some(Message::ChangeFocus(ArrowKey::Down, 3));
                             } else {
                                 return Some(Message::FocusTextInput(Move::Forwards(
                                     chr.to_string(),

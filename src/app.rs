@@ -68,7 +68,7 @@ pub enum Message {
     SetSender(ExtSender),
     SwitchToPage(Page),
     ClipboardHistory(ClipBoardContentType),
-    ChangeFocus(ArrowKey),
+    ChangeFocus(ArrowKey, u32),
 }
 
 /// The window settings for rustcast

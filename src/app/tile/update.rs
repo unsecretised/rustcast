@@ -107,74 +107,80 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
             Task::none()
         }
 
-        Message::ChangeFocus(key) => {
-            let len = match tile.page {
-                Page::ClipboardHistory => tile.clipboard_content.len() as u32,
-                Page::EmojiSearch => tile.emoji_apps.search_prefix(&tile.query_lc).count() as u32, // or tile.results.len()
-                _ => tile.results.len() as u32,
-            };
+        Message::ChangeFocus(key, amount) => {
+            let mut return_task = Task::none();
+            for _ in 0..amount {
+                let len = match tile.page {
+                    Page::ClipboardHistory => tile.clipboard_content.len() as u32,
+                    Page::EmojiSearch => {
+                        tile.emoji_apps.search_prefix(&tile.query_lc).count() as u32
+                    } // or tile.results.len()
+                    _ => tile.results.len() as u32,
+                };
 
-            let old_focus_id = tile.focus_id;
+                let old_focus_id = tile.focus_id;
 
-            if len == 0 {
-                return Task::none();
+                if len == 0 {
+                    return Task::none();
+                }
+
+                let change_by = match tile.page {
+                    Page::EmojiSearch => 6,
+                    _ => 1,
+                };
+
+                let task = match (&key, &tile.page) {
+                    (ArrowKey::Down, _) => {
+                        tile.focus_id = (tile.focus_id + change_by) % len;
+                        Task::none()
+                    }
+                    (ArrowKey::Up, _) => {
+                        tile.focus_id = (tile.focus_id + len - change_by) % len;
+                        Task::none()
+                    }
+                    (ArrowKey::Left, Page::EmojiSearch) => {
+                        tile.focus_id = (tile.focus_id + len - 1) % len;
+                        operation::focus("results")
+                    }
+                    (ArrowKey::Right, Page::EmojiSearch) => {
+                        tile.focus_id = (tile.focus_id + 1) % len;
+                        operation::focus("results")
+                    }
+                    _ => Task::none(),
+                };
+
+                let quantity = match tile.page {
+                    Page::Main => 66.5,
+                    Page::ClipboardHistory => 50.,
+                    Page::EmojiSearch => 5.,
+                };
+
+                let (wrapped_up, wrapped_down) = match &key {
+                    ArrowKey::Up => (tile.focus_id > old_focus_id, false),
+                    ArrowKey::Down => (false, tile.focus_id < old_focus_id),
+                    _ => (false, false),
+                };
+
+                let y = if wrapped_down {
+                    0.0
+                } else if wrapped_up {
+                    (len.saturating_sub(1)) as f32 * quantity
+                } else {
+                    tile.focus_id as f32 * quantity
+                };
+
+                return_task = Task::batch([
+                    task,
+                    operation::scroll_to(
+                        "results",
+                        AbsoluteOffset {
+                            x: None,
+                            y: Some(y),
+                        },
+                    ),
+                ]);
             }
-
-            let change_by = match tile.page {
-                Page::EmojiSearch => 6,
-                _ => 1,
-            };
-
-            let task = match (&key, &tile.page) {
-                (ArrowKey::Down, _) => {
-                    tile.focus_id = (tile.focus_id + change_by) % len;
-                    Task::none()
-                }
-                (ArrowKey::Up, _) => {
-                    tile.focus_id = (tile.focus_id + len - change_by) % len;
-                    Task::none()
-                }
-                (ArrowKey::Left, Page::EmojiSearch) => {
-                    tile.focus_id = (tile.focus_id + len - 1) % len;
-                    operation::focus("results")
-                }
-                (ArrowKey::Right, Page::EmojiSearch) => {
-                    tile.focus_id = (tile.focus_id + 1) % len;
-                    operation::focus("results")
-                }
-                _ => Task::none(),
-            };
-
-            let quantity = match tile.page {
-                Page::Main => 66.5,
-                Page::ClipboardHistory => 50.,
-                Page::EmojiSearch => 5.,
-            };
-
-            let (wrapped_up, wrapped_down) = match &key {
-                ArrowKey::Up => (tile.focus_id > old_focus_id, false),
-                ArrowKey::Down => (false, tile.focus_id < old_focus_id),
-                _ => (false, false),
-            };
-
-            let y = if wrapped_down {
-                0.0
-            } else if wrapped_up {
-                (len.saturating_sub(1)) as f32 * quantity
-            } else {
-                tile.focus_id as f32 * quantity
-            };
-
-            Task::batch([
-                task,
-                operation::scroll_to(
-                    "results",
-                    AbsoluteOffset {
-                        x: None,
-                        y: Some(y),
-                    },
-                ),
-            ])
+            return_task
         }
 
         Message::ResizeWindow(id, height) => {
@@ -526,7 +532,7 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
                         id,
                         ((max_elem * 55) + 35 + DEFAULT_WINDOW_HEIGHT as usize) as f32,
                     )),
-                    Task::done(Message::ChangeFocus(ArrowKey::Left)),
+                    Task::done(Message::ChangeFocus(ArrowKey::Left, 1)),
                 ]))
             } else if tile.page == Page::ClipboardHistory {
                 task.chain(Task::batch([
@@ -534,7 +540,7 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
                         id,
                         ((7 * 55) + 35 + DEFAULT_WINDOW_HEIGHT as usize) as f32,
                     )),
-                    Task::done(Message::ChangeFocus(ArrowKey::Left)),
+                    Task::done(Message::ChangeFocus(ArrowKey::Left, 1)),
                 ]))
             } else {
                 task
