@@ -66,6 +66,12 @@ impl AppIndex {
         app.ranking += 5;
     }
 
+    fn empty() -> AppIndex {
+        AppIndex {
+            by_name: BTreeMap::new(),
+        }
+    }
+
     /// Factory function for creating
     pub fn from_apps(options: Vec<App>) -> Self {
         let mut bmap = BTreeMap::new();
@@ -238,7 +244,7 @@ impl Tile {
         } else if self.page == Page::EmojiSearch {
             &self.emoji_apps
         } else {
-            &AppIndex::from_apps(vec![])
+            &AppIndex::empty()
         };
         let results: Vec<App> = options
             .search_prefix(&query)
@@ -270,10 +276,9 @@ impl Tile {
 /// This is the subscription function that handles hot reloading of the config
 fn handle_hot_reloading() -> impl futures::Stream<Item = Message> {
     stream::channel(100, async |mut output| {
-        let mut content = fs::read_to_string(
-            std::env::var("HOME").unwrap_or("".to_owned()) + "/.config/rustcast/config.toml",
-        )
-        .unwrap_or("".to_string());
+        let config_path =
+            &(std::env::var("HOME").unwrap_or("".to_owned()) + "/.config/rustcast/config.toml");
+        let mut last_modified = fs::metadata(config_path).unwrap().modified().unwrap();
 
         let paths = default_app_paths();
         let mut total_files: usize = paths
@@ -282,25 +287,24 @@ fn handle_hot_reloading() -> impl futures::Stream<Item = Message> {
             .sum();
 
         loop {
-            let current_content = fs::read_to_string(
-                std::env::var("HOME").unwrap_or("".to_owned()) + "/.config/rustcast/config.toml",
-            )
-            .unwrap_or("".to_string());
+            let last_modified_check = fs::metadata(config_path).unwrap().modified().unwrap();
 
             let current_total_files: usize = paths
                 .par_iter()
                 .map(|dir| count_dirs_in_dir(Path::new(dir)))
                 .sum();
 
-            if current_content != content {
-                content = current_content;
-                output.send(Message::ReloadConfig).await.unwrap();
+            if last_modified_check != last_modified {
+                last_modified = last_modified_check;
+                info!("Config file was modified");
+                let _ = output.send(Message::ReloadConfig).await;
             } else if total_files != current_total_files {
                 total_files = current_total_files;
-                output.send(Message::ReloadConfig).await.unwrap();
+                info!("App count was changed");
+                let _ = output.send(Message::ReloadConfig).await;
             }
 
-            tokio::time::sleep(Duration::from_millis(10)).await;
+            tokio::time::sleep(Duration::from_millis(1000)).await;
         }
     })
 }
@@ -330,7 +334,7 @@ fn handle_hotkeys() -> impl futures::Stream<Item = Message> {
             {
                 output.try_send(Message::KeyPressed(event.id)).unwrap();
             }
-            tokio::time::sleep(Duration::from_millis(10)).await;
+            tokio::time::sleep(Duration::from_millis(100)).await;
         }
     })
 }
@@ -385,7 +389,7 @@ fn handle_recipient() -> impl futures::Stream<Item = Message> {
             if let Some(abcd) = abcd {
                 abcd.await;
             }
-            tokio::time::sleep(Duration::from_nanos(10)).await;
+            tokio::time::sleep(Duration::from_millis(100)).await;
         }
     })
 }

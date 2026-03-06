@@ -17,7 +17,10 @@ use crate::{
     config::Config,
 };
 
-use global_hotkey::GlobalHotKeyManager;
+use global_hotkey::{
+    GlobalHotKeyManager,
+    hotkey::{Code, HotKey, Modifiers},
+};
 use log::info;
 use tracing_subscriber::{EnvFilter, Layer, util::SubscriberInitExt};
 
@@ -61,15 +64,17 @@ fn main() -> iced::Result {
 
     let manager = GlobalHotKeyManager::new().unwrap();
 
-    let show_hide = config.toggle_hotkey.parse().unwrap();
+    let show_hide = config
+        .toggle_hotkey
+        .parse()
+        .unwrap_or(HotKey::new(Some(Modifiers::ALT), Code::Space));
 
-    let hotkeys = vec![
-        show_hide,
-        config
-            .clipboard_hotkey
-            .parse()
-            .unwrap_or("SUPER+SHIFT+C".parse().unwrap()),
-    ];
+    let cbhist = config
+        .clipboard_hotkey
+        .parse()
+        .unwrap_or("SUPER+SHIFT+C".parse().unwrap());
+
+    let hotkeys = vec![show_hide, cbhist];
 
     manager
         .register_all(&hotkeys)

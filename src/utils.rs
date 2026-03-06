@@ -52,14 +52,26 @@ pub fn open_url(url: &str) {
 
 /// Check if the provided string is a valid url
 pub fn is_valid_url(s: &str) -> bool {
-    s.ends_with(".com")
-        || s.ends_with(".net")
-        || s.ends_with(".org")
-        || s.ends_with(".edu")
-        || s.ends_with(".gov")
-        || s.ends_with(".io")
-        || s.ends_with(".co")
-        || s.ends_with(".me")
-        || s.ends_with(".app")
-        || s.ends_with(".dev")
+    match s
+        .chars()
+        .rev()
+        .fold(String::new(), |a, b| format!("{}{}", a, b))
+        .split_once('.')
+        .unwrap_or(("", ""))
+        .0
+    {
+        "" => false,
+
+        // Common gTLDs (reversed)
+        "moc" | "gro" | "ten" | "ude" | "vog" | "lim" | "ofni" | "zib" | "eman" | "orp" | "ppa"
+        | "ved" | "oi" | "ia" | "oc" | "em" => true,
+
+        // Common ccTLDs (reversed)
+        "su" | "ku" | "ed" | "rf" | "se" | "ti" | "ln" | "on" | "if" | "kd" | "lp" | "zc"
+        | "ta" | "hc" | "eb" | "ei" | "tp" | "rg" | "ur" | "au" | "rt" | "ni" | "pj" | "rk"
+        | "nc" | "wt" | "kh" | "gs" | "ym" | "di" | "ht" | "nv" | "rb" | "ra" | "xm" | "ac"
+        | "ua" | "zn" | "az" | "ge" | "li" | "as" | "ea" => true,
+
+        _ => false,
+    }
 }
