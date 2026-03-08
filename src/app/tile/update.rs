@@ -474,17 +474,7 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
                 _ => {}
             }
 
-            if tile.query_lc.ends_with("?") || tile.query_lc.split_whitespace().nth(2).is_some() {
-                tile.results = vec![App {
-                    ranking: 0,
-                    open_command: AppCommand::Function(Function::GoogleSearch(tile.query.clone())),
-                    icons: None,
-                    desc: "Web Search".to_string(),
-                    display_name: format!("Search for: {}", tile.query),
-                    search_name: String::new(),
-                }];
-                return single_item_resize_task(id);
-            } else if tile.query_lc.starts_with(">") && tile.page == Page::Main {
+            if tile.query_lc.starts_with(">") && tile.page == Page::Main {
                 let command = tile.query.strip_prefix(">").unwrap_or("");
                 tile.results = vec![App {
                     ranking: 20,
@@ -564,6 +554,19 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
                     display_name: res.eval().map(|x| x.to_string()).unwrap_or("".to_string()),
                     search_name: "".to_string(),
                 });
+                return single_item_resize_task(id);
+            } else if tile.query_lc.ends_with("?")
+                || tile.query_lc.split_whitespace().nth(2).is_some()
+            {
+                tile.results = vec![App {
+                    ranking: 0,
+                    open_command: AppCommand::Function(Function::GoogleSearch(tile.query.clone())),
+                    icons: None,
+                    desc: "Web Search".to_string(),
+                    display_name: format!("Search for: {}", tile.query),
+                    search_name: String::new(),
+                }];
+                return single_item_resize_task(id);
             }
             task
         }
