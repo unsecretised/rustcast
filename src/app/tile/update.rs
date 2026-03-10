@@ -19,6 +19,7 @@ use crate::app::WINDOW_WIDTH;
 use crate::app::apps::App;
 use crate::app::apps::AppCommand;
 use crate::app::default_settings;
+use crate::app::menubar::menu_builder;
 use crate::app::menubar::menu_icon;
 use crate::app::tile::AppIndex;
 use crate::app::{Message, Page, tile::Tile};
@@ -27,6 +28,7 @@ use crate::calculator::is_valid_expr;
 use crate::clipboard::ClipBoardContentType;
 use crate::commands::Function;
 use crate::config::Config;
+use crate::tile::Hotkeys;
 use crate::unit_conversion;
 use crate::utils::is_valid_url;
 use crate::{app::ArrowKey, platform::focus_this_app};
@@ -239,16 +241,29 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
                 Err(_) => return Task::none(),
             };
 
+            let sender = tile.sender.clone().unwrap();
+            let new_config_clone = new_config.clone();
+
+            tile.tray_icon.as_mut().map(move |x| {
+                x.set_visible(new_config_clone.show_trayicon).unwrap_or(());
+                x.set_menu(Some(Box::new(menu_builder(new_config_clone, sender))));
+            });
+
             let mut new_options = get_installed_apps(new_config.theme.show_icons);
             new_options.extend(new_config.shells.iter().map(|x| x.to_app()));
             new_options.extend(new_config.modes.to_apps());
             new_options.extend(App::basic_apps());
             new_options.par_sort_by_key(|x| x.display_name.len());
 
-            tile.tray_icon = if new_config.show_trayicon {
-                Some(menu_icon(new_config.clone(), tile.sender.clone().unwrap()))
-            } else {
-                None
+            tile.hotkeys = Hotkeys {
+                toggle: new_config
+                    .toggle_hotkey
+                    .parse()
+                    .unwrap_or(tile.hotkeys.toggle),
+                clipboard_hotkey: new_config
+                    .clipboard_hotkey
+                    .parse()
+                    .unwrap_or(tile.hotkeys.clipboard_hotkey),
             };
 
             tile.theme = new_config.theme.to_owned().into();

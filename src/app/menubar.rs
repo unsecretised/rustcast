@@ -25,22 +25,32 @@ use tokio::runtime::Runtime;
 
 /// This create a new menubar icon for the app
 pub fn menu_icon(config: Config, sender: ExtSender) -> TrayIcon {
-    let hotkey = config.toggle_hotkey.parse::<HotKey>().unwrap();
     let builder = TrayIconBuilder::new();
+    let menu = menu_builder(config, sender);
+
+    let image = get_image();
+    let icon = Icon::from_rgba(image.as_bytes().to_vec(), image.width(), image.height()).unwrap();
+
+    builder
+        .with_icon(icon)
+        .with_menu(Box::new(menu))
+        .build()
+        .unwrap()
+}
+
+pub fn menu_builder(config: Config, sender: ExtSender) -> Menu {
+    let hotkey = config.toggle_hotkey.parse::<HotKey>().unwrap();
 
     let mut modes = config.modes;
     if !modes.contains_key("default") {
         modes.insert("Default".to_string(), "default".to_string());
     }
 
-    let image = get_image();
-    let icon = Icon::from_rgba(image.as_bytes().to_vec(), image.width(), image.height()).unwrap();
-
     init_event_handler(sender, hotkey.id());
 
-    let menu = Menu::with_items(&[
+    Menu::with_items(&[
         &version_item(),
-        &about_item(image),
+        &about_item(get_image()),
         &open_github_item(),
         &PredefinedMenuItem::separator(),
         &refresh_item(),
@@ -55,13 +65,7 @@ pub fn menu_icon(config: Config, sender: ExtSender) -> TrayIcon {
         &hide_tray_icon(),
         &quit_item(),
     ])
-    .unwrap();
-
-    builder
-        .with_icon(icon)
-        .with_menu(Box::new(menu))
-        .build()
-        .unwrap()
+    .unwrap()
 }
 
 fn get_image() -> DynamicImage {
