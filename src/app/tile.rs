@@ -186,9 +186,6 @@ impl Tile {
             keyboard::listen().filter_map(|event| {
                 if let keyboard::Event::KeyPressed { key, modifiers, .. } = event {
                     match key {
-                        keyboard::Key::Named(Named::Escape) => {
-                            return Some(Message::ReturnFocus);
-                        }
                         keyboard::Key::Named(Named::ArrowUp) => {
                             return Some(Message::ChangeFocus(ArrowKey::Up, 1));
                         }
@@ -357,7 +354,9 @@ fn handle_clipboard_history() -> impl futures::Stream<Item = Message> {
         loop {
             let byte_rep = if let Ok(a) = clipboard.get_image() {
                 Some(ClipBoardContentType::Image(a))
-            } else if let Ok(a) = clipboard.get_text() {
+            } else if let Ok(a) = clipboard.get_text()
+                && !a.trim().is_empty()
+            {
                 Some(ClipBoardContentType::Text(a))
             } else {
                 None

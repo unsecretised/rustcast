@@ -32,6 +32,17 @@ pub enum Page {
     EmojiSearch,
 }
 
+impl std::fmt::Display for Page {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self.to_owned() {
+            Page::Main => "App search",
+            Page::FileSearch => "File search",
+            Page::EmojiSearch => "Emoji search",
+            Page::ClipboardHistory => "Clipboard history",
+        })
+    }
+}
+
 /// The types of arrow keys
 #[allow(dead_code)]
 #[derive(Debug, Clone)]

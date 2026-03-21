@@ -11,6 +11,7 @@ use iced::widget::operation::AbsoluteOffset;
 use iced::window;
 use iced::window::Id;
 use log::info;
+use rayon::iter::IntoParallelRefIterator;
 use rayon::iter::ParallelIterator;
 use rayon::slice::ParallelSliceMut;
 
@@ -84,8 +85,8 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
         }
 
         Message::EscKeyPressed(id) => {
-            if tile.page == Page::EmojiSearch && !tile.query_lc.is_empty() {
-                return Task::none();
+            if tile.page != Page::Main {
+                return Task::done(Message::SwitchToPage(Page::Main));
             }
 
             if tile.query_lc.is_empty() {
@@ -409,6 +410,24 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
         }
 
         Message::ClipboardHistory(content) => {
+            if !tile.clipboard_content.contains(&content) {
+                tile.clipboard_content.insert(0, content);
+                return Task::none();
+            }
+
+            let new_content_vec = tile
+                .clipboard_content
+                .par_iter()
+                .filter_map(|x| {
+                    if *x == content {
+                        None
+                    } else {
+                        Some(x.to_owned())
+                    }
+                })
+                .collect();
+
+            tile.clipboard_content = new_content_vec;
             tile.clipboard_content.insert(0, content);
             Task::none()
         }
@@ -421,7 +440,11 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
             }
 
             tile.query_lc = input.trim().to_lowercase();
-            tile.query = input;
+            tile.query = input.clone();
+
+            if let Some(alias) = tile.config.aliases.get(&input.trim().to_lowercase()) {
+                tile.query_lc = alias.to_string();
+            }
 
             // Return a task that waits for the debounce delay before executing search
             if let Some(delay) = tile.page.debounce_delay() {
@@ -568,11 +591,14 @@ fn execute_query(tile: &mut Tile, id: Id) -> Task<Message> {
         }
     }
 
-    if tile.page != Page::FileSearch {
-        tile.handle_search_query_changed();
-    } else {
-        tile.results = search_for_file(&tile.query_lc);
-    }
+            if tile.page != Page::FileSearch {
+                tile.handle_search_query_changed();
+            } else {
+                tile.results = search_for_file(
+                    &tile.query_lc,
+                    tile.config.search_dirs.iter().map(|x| x.as_str()).collect(),
+                );
+            }
 
     if !tile.results.is_empty() {
         tile.results.par_sort_by_key(|x| -x.ranking);

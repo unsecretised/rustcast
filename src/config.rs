@@ -27,6 +27,8 @@ pub struct Config {
     pub show_trayicon: bool,
     pub shells: Vec<Shelly>,
     pub modes: HashMap<String, String>,
+    pub aliases: HashMap<String, String>,
+    pub search_dirs: Vec<String>,
     pub log_path: String,
 }
 
@@ -42,8 +44,14 @@ impl Default for Config {
             search_url: "https://google.com/search?q=%s".to_string(),
             haptic_feedback: false,
             show_trayicon: true,
+            search_dirs: vec![
+                "~/Documents".to_string(),
+                "~/Desktop".to_string(),
+                "~/Downloads".to_string(),
+            ],
             log_path: "/tmp/rustcast.log".to_string(),
             modes: HashMap::new(),
+            aliases: HashMap::new(),
             shells: vec![],
         }
     }

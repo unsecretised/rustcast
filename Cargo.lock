@@ -3868,7 +3868,7 @@ dependencies = [
 
 [[package]]
 name = "rustcast"
-version = "0.6.3"
+version = "0.6.7"
 dependencies = [
  "anyhow",
  "arboard",

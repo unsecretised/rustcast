@@ -1,8 +1,12 @@
 //! The elements for the clipboard history page
-use iced::widget::{
-    Scrollable,
-    image::{Handle, Viewer},
-    scrollable::{Direction, Scrollbar},
+use iced::{
+    ContentFit,
+    border::Radius,
+    widget::{
+        Scrollable,
+        image::{Handle, Viewer},
+        scrollable::{Direction, Scrollbar},
+    },
 };
 
 use crate::{
@@ -26,30 +30,51 @@ pub fn clipboard_view(
 ) -> Element<'static, Message> {
     let theme_clone = theme.clone();
     let theme_clone_2 = theme.clone();
-    let viewport_content: Element<'static, Message> =
-        match clipboard_content.get(focussed_id as usize) {
-            Some(content) => match content {
-                ClipBoardContentType::Text(txt) => Text::new(txt.to_owned())
+    let viewport_content: Element<'static, Message> = match clipboard_content
+        .get(focussed_id as usize)
+    {
+        Some(content) => match content {
+            ClipBoardContentType::Text(txt) => Scrollable::with_direction(
+                Text::new(txt.to_owned())
                     .height(Length::Fill)
                     .width(Length::Fill)
                     .align_x(Alignment::Start)
                     .font(theme.font())
-                    .size(16)
-                    .into(),
+                    .size(16),
+                Direction::Both {
+                    vertical: Scrollbar::new().scroller_width(0.).width(0.),
+                    horizontal: Scrollbar::new().scroller_width(0.).width(0.),
+                },
+            )
+            .into(),
 
-                ClipBoardContentType::Image(data) => {
-                    let bytes = data.to_owned_img().into_owned_bytes();
+            ClipBoardContentType::Image(data) => {
+                let bytes = data.to_owned_img().into_owned_bytes();
+                container(
                     Viewer::new(
                         Handle::from_rgba(data.width as u32, data.height as u32, bytes.to_vec())
                             .clone(),
                     )
-                    .width(500)
-                    .height(500)
-                    .into()
-                }
-            },
-            None => Text::new("").into(),
-        };
+                    .content_fit(ContentFit::ScaleDown)
+                    .scale_step(0.)
+                    .max_scale(1.)
+                    .min_scale(1.),
+                )
+                .padding(10)
+                .style(|_| container::Style {
+                    border: iced::Border {
+                        color: iced::Color::WHITE,
+                        width: 1.,
+                        radius: Radius::new(0.),
+                    },
+                    ..Default::default()
+                })
+                .width(Length::Fill)
+                .into()
+            }
+        },
+        None => Text::new("").into(),
+    };
     container(Row::from_vec(vec![
         container(
             iced::widget::scrollable(
@@ -65,18 +90,12 @@ pub fn clipboard_view(
         .height(10000)
         .style(move |_| result_row_container_style(&theme_clone_2, false))
         .into(),
-        container(Scrollable::with_direction(
-            viewport_content,
-            Direction::Both {
-                vertical: Scrollbar::new().scroller_width(0.).width(0.),
-                horizontal: Scrollbar::new().scroller_width(0.).width(0.),
-            },
-        ))
-        .height(10000)
-        .padding(10)
-        .style(move |_| result_row_container_style(&theme_clone, false))
-        .width((WINDOW_WIDTH / 3.) * 2.)
-        .into(),
+        container(viewport_content)
+            .height(10000)
+            .padding(10)
+            .style(move |_| result_row_container_style(&theme_clone, false))
+            .width((WINDOW_WIDTH / 3.) * 2.)
+            .into(),
     ]))
     .height(280)
     .into()
