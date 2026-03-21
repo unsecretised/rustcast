@@ -15,7 +15,6 @@ emojis = "0.8.0"
 global-hotkey = "0.7.0"
 iced = { version = "0.14.0", features = ["image", "tokio"] }
 icns = "0.3.1"
-ignore = "0.4.25"
 image = { version = "0.25.9", features = ["tiff"] }
 libc = "0.2.180"
 log = "0.4.29"
