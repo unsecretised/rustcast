@@ -27,6 +27,7 @@ use log::{info, warn};
 use objc2::rc::Retained;
 use objc2_app_kit::NSRunningApplication;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
+use tokio::io::AsyncBufReadExt;
 use tray_icon::TrayIcon;
 
 use std::collections::HashMap;
@@ -130,6 +131,7 @@ pub struct Tile {
     sender: Option<ExtSender>,
     page: Page,
     pub height: f32,
+    pub file_search_sender: Option<tokio::sync::watch::Sender<(String, Vec<String>)>>,
     debouncer: Debouncer,
 }
 
@@ -182,6 +184,7 @@ impl Tile {
             Subscription::run(check_version),
             Subscription::run(handle_hot_reloading),
             Subscription::run(handle_clipboard_history),
+            Subscription::run(handle_file_search),
             window::close_events().map(Message::HideWindow),
             keyboard::listen().filter_map(|event| {
                 if let keyboard::Event::KeyPressed { key, modifiers, .. } = event {
@@ -373,6 +376,145 @@ fn handle_clipboard_history() -> impl futures::Stream<Item = Message> {
                 prev_byte_rep = byte_rep;
             }
             tokio::time::sleep(Duration::from_millis(100)).await;
+        }
+    })
+}
+
+/// Read mdfind stdout line-by-line, sending batched results to the UI.
+///
+/// Returns when stdout reaches EOF, the receiver signals a new query, or
+/// max results are reached. Caller is responsible for process lifetime.
+async fn read_mdfind_results(
+    stdout: tokio::process::ChildStdout,
+    home_dir: &str,
+    receiver: &mut tokio::sync::watch::Receiver<(String, Vec<String>)>,
+    output: &mut iced::futures::channel::mpsc::Sender<Message>,
+) {
+    use crate::app::{FILE_SEARCH_BATCH_SIZE, FILE_SEARCH_MAX_RESULTS};
+
+    let mut reader = tokio::io::BufReader::new(stdout);
+    let mut batch: Vec<crate::app::apps::App> = Vec::with_capacity(FILE_SEARCH_BATCH_SIZE as usize);
+    let mut total_sent: u32 = 0;
+
+    loop {
+        let mut line = String::new();
+        let read_result = tokio::select! {
+            result = reader.read_line(&mut line) => result,
+            _ = receiver.changed() => {
+                // New query arrived — caller will handle it.
+                break;
+            }
+        };
+
+        match read_result {
+            Ok(0) => {
+                // EOF — flush remaining batch.
+                if !batch.is_empty() {
+                    output
+                        .send(Message::FileSearchResult(std::mem::take(&mut batch)))
+                        .await
+                        .ok();
+                }
+                break;
+            }
+            Ok(_) => {
+                if let Some(app) = crate::commands::path_to_app(line.trim(), home_dir) {
+                    batch.push(app);
+                    total_sent += 1;
+                }
+                if batch.len() as u32 >= FILE_SEARCH_BATCH_SIZE {
+                    output
+                        .send(Message::FileSearchResult(std::mem::take(&mut batch)))
+                        .await
+                        .ok();
+                }
+                if total_sent >= FILE_SEARCH_MAX_RESULTS {
+                    if !batch.is_empty() {
+                        output
+                            .send(Message::FileSearchResult(std::mem::take(&mut batch)))
+                            .await
+                            .ok();
+                    }
+                    break;
+                }
+            }
+            Err(_) => break,
+        }
+    }
+}
+
+/// Async subscription that spawns `mdfind` for file search queries.
+///
+/// Uses a `watch` channel so the Tile can push new (query, dirs) pairs.
+/// Each query change cancels any running `mdfind` and starts a fresh one.
+fn handle_file_search() -> impl futures::Stream<Item = Message> {
+    stream::channel(100, async |mut output| {
+        let (sender, mut receiver) =
+            tokio::sync::watch::channel((String::new(), Vec::<String>::new()));
+        output
+            .send(Message::SetFileSearchSender(sender))
+            .await
+            .expect("Failed to send file search sender.");
+
+        let home_dir = std::env::var("HOME").unwrap_or_else(|_| "/".to_string());
+        assert!(!home_dir.is_empty(), "HOME must not be empty.");
+
+        let mut child: Option<tokio::process::Child> = None;
+
+        loop {
+            if receiver.changed().await.is_err() {
+                return;
+            }
+            receiver.borrow_and_update();
+
+            // Kill previous mdfind if still running.
+            if let Some(ref mut proc) = child {
+                proc.kill().await.ok();
+                proc.wait().await.ok();
+            }
+            child = None;
+
+            let (query, dirs) = receiver.borrow().clone();
+            assert!(query.len() < 1024, "Query too long.");
+
+            if query.len() < 2 {
+                output.send(Message::FileSearchClear).await.ok();
+                continue;
+            }
+
+            // The query is passed as a -name argument to mdfind. mdfind interprets
+            // this as a substring match on filenames — not as a glob or shell expression.
+            // Passed via args (not shell), so no shell injection risk.
+            // When dirs is empty, omit -onlyin so mdfind searches system-wide.
+            let mut args: Vec<String> = vec!["-name".to_string(), query.clone()];
+            for dir in &dirs {
+                let expanded = dir.replace("~", &home_dir);
+                args.push("-onlyin".to_string());
+                args.push(expanded);
+            }
+
+            let spawn_result = tokio::process::Command::new("mdfind")
+                .args(&args)
+                .stdout(std::process::Stdio::piped())
+                .stderr(std::process::Stdio::null())
+                .kill_on_drop(true)
+                .spawn();
+
+            let mut proc = match spawn_result {
+                Ok(p) => p,
+                Err(err) => {
+                    warn!("Failed to spawn mdfind: {err}");
+                    continue;
+                }
+            };
+
+            let stdout = match proc.stdout.take() {
+                Some(s) => s,
+                None => continue,
+            };
+            child = Some(proc);
+
+            read_mdfind_results(stdout, &home_dir, &mut receiver, &mut output).await;
         }
     })
 }

@@ -27,7 +27,6 @@ use crate::app::tile::AppIndex;
 use crate::app::{Message, Page, tile::Tile};
 use crate::calculator::Expr;
 use crate::commands::Function;
-use crate::commands::search_for_file;
 use crate::config::Config;
 use crate::debounce::DebouncePolicy;
 use crate::unit_conversion;
@@ -432,6 +431,37 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
             Task::none()
         }
 
+        Message::SetFileSearchSender(sender) => {
+            tile.file_search_sender = Some(sender);
+            Task::none()
+        }
+
+        Message::FileSearchResult(apps) => {
+            assert!(apps.len() <= 50, "Batch must not exceed 50 results.");
+            if tile.page == Page::FileSearch {
+                let prev_display_count = std::cmp::min(5, tile.results.len());
+                tile.results.extend(apps);
+                let new_display_count = std::cmp::min(5, tile.results.len());
+                // Only resize when the visible row count changes (max 5).
+                if new_display_count != prev_display_count && new_display_count > 0 {
+                    return window::latest().map(move |x| {
+                        Message::ResizeWindow(
+                            x.unwrap(),
+                            ((new_display_count * 55) + 35 + DEFAULT_WINDOW_HEIGHT as usize) as f32,
+                        )
+                    });
+                }
+            }
+            Task::none()
+        }
+
+        Message::FileSearchClear => {
+            if tile.page == Page::FileSearch {
+                tile.results.clear();
+            }
+            Task::none()
+        }
+
         Message::SearchQueryChanged(input, id) => {
             tile.focus_id = 0;
 
@@ -589,14 +619,19 @@ fn execute_query(tile: &mut Tile, id: Id) -> Task<Message> {
         }
     }
 
-    if tile.page != Page::FileSearch {
-        tile.handle_search_query_changed();
-    } else {
-        tile.results = search_for_file(
-            &tile.query_lc,
-            tile.config.search_dirs.iter().map(|x| x.as_str()).collect(),
-        );
+    if tile.page == Page::FileSearch {
+        // File search is async — dispatch to the mdfind subscription and
+        // return immediately. Results arrive via FileSearchResult messages.
+        if let Some(ref sender) = tile.file_search_sender {
+            tile.results.clear();
+            sender
+                .send((tile.query_lc.clone(), tile.config.search_dirs.clone()))
+                .ok();
+        }
+        return task;
     }
+
+    tile.handle_search_query_changed();
 
     if !tile.results.is_empty() {
         tile.results.par_sort_by_key(|x| -x.ranking);

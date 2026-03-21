@@ -45,11 +45,7 @@ impl Default for Config {
             search_url: "https://google.com/search?q=%s".to_string(),
             haptic_feedback: false,
             show_trayicon: true,
-            search_dirs: vec![
-                "~/Documents".to_string(),
-                "~/Desktop".to_string(),
-                "~/Downloads".to_string(),
-            ],
+            search_dirs: vec!["~".to_string()],
             log_path: "/tmp/rustcast.log".to_string(),
             modes: HashMap::new(),
             aliases: HashMap::new(),
