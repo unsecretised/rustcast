@@ -30,6 +30,7 @@ pub struct Config {
     pub aliases: HashMap<String, String>,
     pub search_dirs: Vec<String>,
     pub log_path: String,
+    pub debounce_delay: u64,
 }
 
 impl Default for Config {
@@ -53,6 +54,7 @@ impl Default for Config {
             modes: HashMap::new(),
             aliases: HashMap::new(),
             shells: vec![],
+            debounce_delay: 300,
         }
     }
 }

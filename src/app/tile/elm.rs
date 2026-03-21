@@ -18,6 +18,7 @@ use crate::app::pages::emoji::emoji_page;
 use crate::app::tile::{AppIndex, Hotkeys};
 use crate::app::{DEFAULT_WINDOW_HEIGHT, ToApp, ToApps};
 use crate::config::Theme;
+use crate::debounce::Debouncer;
 use crate::styles::{contents_style, glass_border, glass_surface, rustcast_text_input_style};
 use crate::{app::WINDOW_WIDTH, platform};
 use crate::{app::pages::clipboard::clipboard_view, platform::get_installed_apps};
@@ -82,6 +83,7 @@ pub fn new(hotkey: HotKey, config: &Config) -> (Tile, Task<Message>) {
             sender: None,
             page: Page::Main,
             height: DEFAULT_WINDOW_HEIGHT,
+            debouncer: Debouncer::new(config.debounce_delay),
         },
         Task::batch([open.map(|_| Message::OpenWindow)]),
     )

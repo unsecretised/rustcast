@@ -29,6 +29,7 @@ use crate::calculator::Expr;
 use crate::commands::Function;
 use crate::commands::search_for_file;
 use crate::config::Config;
+use crate::debounce::DebouncePolicy;
 use crate::unit_conversion;
 use crate::utils::is_valid_url;
 use crate::{app::ArrowKey, platform::focus_this_app};
@@ -432,7 +433,6 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
         }
 
         Message::SearchQueryChanged(input, id) => {
-            let mut task = Task::none();
             tile.focus_id = 0;
 
             if tile.config.haptic_feedback {
@@ -446,157 +446,28 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
                 tile.query_lc = alias.to_string();
             }
 
-            let prev_size = tile.results.len();
-
-            if tile.page == Page::ClipboardHistory && tile.query_lc != "main" {
-                return Task::none();
-            } else if tile.page == Page::EmojiSearch && tile.query_lc.is_empty() {
-                tile.results = if tile.query_lc.is_empty() {
-                    Vec::new()
-                } else {
-                    tile.emoji_apps
-                        .search_prefix(&tile.query_lc)
-                        .map(|x| x.to_owned())
-                        .collect()
-                };
-            }
-
-            if tile.query_lc.is_empty()
-                || (tile.query_lc.chars().count() < 2 && tile.page == Page::FileSearch)
-            {
-                tile.results = Vec::new();
-                return zero_item_resize_task(id);
-            };
-
-            match tile.query_lc.as_str() {
-                "randomvar" => {
-                    let rand_num = rand::random_range(0..100);
-                    tile.results = vec![App {
-                        ranking: 0,
-                        open_command: AppCommand::Function(Function::RandomVar(rand_num)),
-                        desc: "Easter egg".to_string(),
-                        icons: None,
-                        display_name: rand_num.to_string(),
-                        search_name: String::new(),
-                    }];
-                    return single_item_resize_task(id);
-                }
-                "lemon" => {
-                    tile.results = vec![App {
-                        ranking: 0,
-                        open_command: AppCommand::Display,
-                        desc: "Easter Egg".to_string(),
-                        icons: lemon_icon_handle(),
-                        display_name: "Lemon".to_string(),
-                        search_name: "".to_string(),
-                    }];
-                    return single_item_resize_task(id);
-                }
-                "67" => {
-                    tile.results = vec![App {
-                        ranking: 0,
-                        open_command: AppCommand::Function(Function::RandomVar(67)),
-                        desc: "Easter egg".to_string(),
-                        icons: None,
-                        display_name: 67.to_string(),
-                        search_name: String::new(),
-                    }];
-                    return single_item_resize_task(id);
-                }
-                "cbhist" => {
-                    task = task.chain(Task::done(Message::SwitchToPage(Page::ClipboardHistory)));
-                    tile.page = Page::ClipboardHistory;
-                }
-                "main" => {
-                    if tile.page != Page::Main {
-                        task = task.chain(Task::done(Message::SwitchToPage(Page::Main)));
-                        return Task::batch([zero_item_resize_task(id), task]);
-                    }
-                }
-                query => 'a: {
-                    if !query.starts_with(">") || tile.page != Page::Main {
-                        break 'a;
-                    }
-                    let command = tile.query.strip_prefix(">").unwrap_or("");
-                    tile.results = vec![App {
-                        ranking: 20,
-                        open_command: AppCommand::Function(Function::RunShellCommand(
-                            command.to_string(),
-                        )),
-                        display_name: format!("Shell Command: {}", command),
-                        icons: None,
-                        search_name: "".to_string(),
-                        desc: "Shell Command".to_string(),
-                    }];
-                    return single_item_resize_task(id);
-                }
-            }
-
-            if tile.page != Page::FileSearch {
-                tile.handle_search_query_changed();
+            // Return a task that waits for the debounce delay before executing search
+            if let Some(delay) = tile.page.debounce_delay(&tile.config) {
+                tile.debouncer.reset();
+                Task::perform(
+                    async move {
+                        tokio::time::sleep(delay).await;
+                        id
+                    },
+                    Message::DebouncedSearch,
+                )
             } else {
-                tile.results = search_for_file(
-                    &tile.query_lc,
-                    tile.config.search_dirs.iter().map(|x| x.as_str()).collect(),
-                );
+                execute_query(tile, id)
+            }
+        }
+
+        Message::DebouncedSearch(id) => {
+            // Only execute if this is still the most recent debounce timer
+            if !tile.debouncer.is_ready() {
+                return Task::none();
             }
 
-            if !tile.results.is_empty() {
-                tile.results.par_sort_by_key(|x| -x.ranking);
-
-                let new_length = tile.results.len();
-                let max_elem = min(5, new_length);
-
-                if prev_size != new_length {
-                    return task.chain(Task::batch([
-                        Task::done(Message::ResizeWindow(
-                            id,
-                            ((max_elem * 55) + 35 + DEFAULT_WINDOW_HEIGHT as usize) as f32,
-                        )),
-                        Task::done(Message::ChangeFocus(ArrowKey::Left, 1)),
-                    ]));
-                } else {
-                    return task;
-                }
-            }
-
-            if is_valid_url(&tile.query) {
-                tile.results.push(App {
-                    ranking: 0,
-                    open_command: AppCommand::Function(Function::OpenWebsite(tile.query.clone())),
-                    desc: "Web Browsing".to_string(),
-                    icons: None,
-                    display_name: "Open Website: ".to_string() + &tile.query,
-                    search_name: String::new(),
-                });
-            } else if let Some(conversions) = unit_conversion::convert_query(&tile.query) {
-                tile.results = conversions
-                    .into_iter()
-                    .map(|conversion| conversion.to_app())
-                    .collect();
-                return single_item_resize_task(id);
-            } else if let Ok(res) = Expr::from_str(&tile.query) {
-                tile.results.push(App {
-                    ranking: 0,
-                    open_command: AppCommand::Function(Function::Calculate(res.clone())),
-                    desc: RUSTCAST_DESC_NAME.to_string(),
-                    icons: None,
-                    display_name: res.eval().map(|x| x.to_string()).unwrap_or("".to_string()),
-                    search_name: "".to_string(),
-                });
-                return single_item_resize_task(id);
-            } else if tile.query.ends_with("?") || tile.query.split_whitespace().nth(2).is_some() {
-                tile.results = vec![App {
-                    ranking: 0,
-                    open_command: AppCommand::Function(Function::GoogleSearch(tile.query.clone())),
-                    icons: None,
-                    desc: "Web Search".to_string(),
-                    display_name: format!("Search for: {}", tile.query),
-                    search_name: String::new(),
-                }];
-                return single_item_resize_task(id);
-            }
-            task
+            execute_query(tile, id)
         }
     }
 }
@@ -630,4 +501,157 @@ fn lemon_icon_handle() -> Option<Handle> {
         .decode()
         .ok()
         .map(|img| Handle::from_rgba(img.width(), img.height(), img.into_bytes()))
+}
+
+fn execute_query(tile: &mut Tile, id: Id) -> Task<Message> {
+    let mut task = Task::none();
+    let prev_size = tile.results.len();
+
+    if tile.page == Page::ClipboardHistory && tile.query_lc != "main" {
+        return Task::none();
+    } else if tile.page == Page::EmojiSearch && tile.query_lc.is_empty() {
+        tile.results = if tile.query_lc.is_empty() {
+            Vec::new()
+        } else {
+            tile.emoji_apps
+                .search_prefix(&tile.query_lc)
+                .map(|x| x.to_owned())
+                .collect()
+        };
+    }
+
+    if tile.query_lc.is_empty()
+        || (tile.query_lc.chars().count() < 2 && tile.page == Page::FileSearch)
+    {
+        tile.results = Vec::new();
+        return zero_item_resize_task(id);
+    };
+
+    match tile.query_lc.as_str() {
+        "randomvar" => {
+            let rand_num = rand::random_range(0..100);
+            tile.results = vec![App {
+                ranking: 0,
+                open_command: AppCommand::Function(Function::RandomVar(rand_num)),
+                desc: "Easter egg".to_string(),
+                icons: None,
+                display_name: rand_num.to_string(),
+                search_name: String::new(),
+            }];
+            return single_item_resize_task(id);
+        }
+        "lemon" => {
+            tile.results = vec![App {
+                ranking: 0,
+                open_command: AppCommand::Display,
+                desc: "Easter Egg".to_string(),
+                icons: lemon_icon_handle(),
+                display_name: "Lemon".to_string(),
+                search_name: "".to_string(),
+            }];
+            return single_item_resize_task(id);
+        }
+        "67" => {
+            tile.results = vec![App {
+                ranking: 0,
+                open_command: AppCommand::Function(Function::RandomVar(67)),
+                desc: "Easter egg".to_string(),
+                icons: None,
+                display_name: 67.to_string(),
+                search_name: String::new(),
+            }];
+            return single_item_resize_task(id);
+        }
+        "cbhist" => {
+            task = task.chain(Task::done(Message::SwitchToPage(Page::ClipboardHistory)));
+            tile.page = Page::ClipboardHistory;
+        }
+        "main" => {
+            if tile.page != Page::Main {
+                task = task.chain(Task::done(Message::SwitchToPage(Page::Main)));
+                return Task::batch([zero_item_resize_task(id), task]);
+            }
+        }
+        query => 'a: {
+            if !query.starts_with(">") || tile.page != Page::Main {
+                break 'a;
+            }
+            let command = tile.query.strip_prefix(">").unwrap_or("");
+            tile.results = vec![App {
+                ranking: 20,
+                open_command: AppCommand::Function(Function::RunShellCommand(command.to_string())),
+                display_name: format!("Shell Command: {}", command),
+                icons: None,
+                search_name: "".to_string(),
+                desc: "Shell Command".to_string(),
+            }];
+            return single_item_resize_task(id);
+        }
+    }
+
+    if tile.page != Page::FileSearch {
+        tile.handle_search_query_changed();
+    } else {
+        tile.results = search_for_file(
+            &tile.query_lc,
+            tile.config.search_dirs.iter().map(|x| x.as_str()).collect(),
+        );
+    }
+
+    if !tile.results.is_empty() {
+        tile.results.par_sort_by_key(|x| -x.ranking);
+
+        let new_length = tile.results.len();
+        let max_elem = min(5, new_length);
+
+        if prev_size != new_length {
+            return task.chain(Task::batch([
+                Task::done(Message::ResizeWindow(
+                    id,
+                    ((max_elem * 55) + 35 + DEFAULT_WINDOW_HEIGHT as usize) as f32,
+                )),
+                Task::done(Message::ChangeFocus(ArrowKey::Left, 1)),
+            ]));
+        } else {
+            return task;
+        }
+    }
+
+    if is_valid_url(&tile.query) {
+        tile.results.push(App {
+            ranking: 0,
+            open_command: AppCommand::Function(Function::OpenWebsite(tile.query.clone())),
+            desc: "Web Browsing".to_string(),
+            icons: None,
+            display_name: "Open Website: ".to_string() + &tile.query,
+            search_name: String::new(),
+        });
+    } else if let Some(conversions) = unit_conversion::convert_query(&tile.query) {
+        tile.results = conversions
+            .into_iter()
+            .map(|conversion| conversion.to_app())
+            .collect();
+        return single_item_resize_task(id);
+    } else if let Ok(res) = Expr::from_str(&tile.query) {
+        tile.results.push(App {
+            ranking: 0,
+            open_command: AppCommand::Function(Function::Calculate(res.clone())),
+            desc: RUSTCAST_DESC_NAME.to_string(),
+            icons: None,
+            display_name: res.eval().map(|x| x.to_string()).unwrap_or("".to_string()),
+            search_name: "".to_string(),
+        });
+        return single_item_resize_task(id);
+    } else if tile.query.ends_with("?") || tile.query.split_whitespace().nth(2).is_some() {
+        tile.results = vec![App {
+            ranking: 0,
+            open_command: AppCommand::Function(Function::GoogleSearch(tile.query.clone())),
+            icons: None,
+            desc: "Web Search".to_string(),
+            display_name: format!("Search for: {}", tile.query),
+            search_name: String::new(),
+        }];
+        return single_item_resize_task(id);
+    }
+    task
 }
