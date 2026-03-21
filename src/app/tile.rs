@@ -5,9 +5,9 @@ pub mod update;
 use crate::app::{ArrowKey, Message, Move, Page};
 use crate::clipboard::ClipBoardContentType;
 use crate::config::Config;
+use crate::debounce::Debouncer;
 use crate::utils::open_settings;
 use crate::{app::apps::App, platform::default_app_paths};
-use crate::debounce::Debouncer;
 
 use arboard::Clipboard;
 use global_hotkey::hotkey::HotKey;
@@ -34,7 +34,7 @@ use std::fmt::Debug;
 use std::fs;
 use std::path::Path;
 use std::str::FromStr;
-use std::time::{Duration};
+use std::time::Duration;
 
 /// This is a wrapper around the sender to disable dropping
 #[derive(Clone, Debug)]

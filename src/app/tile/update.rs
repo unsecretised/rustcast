@@ -450,12 +450,12 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
             if let Some(delay) = tile.page.debounce_delay() {
                 tile.debouncer.reset();
                 Task::perform(
-                async move {
-                    tokio::time::sleep(delay).await;
-                    id
-                },
-                Message::DebouncedSearch,
-            )
+                    async move {
+                        tokio::time::sleep(delay).await;
+                        id
+                    },
+                    Message::DebouncedSearch,
+                )
             } else {
                 execute_query(tile, id)
             }
@@ -579,9 +579,7 @@ fn execute_query(tile: &mut Tile, id: Id) -> Task<Message> {
             let command = tile.query.strip_prefix(">").unwrap_or("");
             tile.results = vec![App {
                 ranking: 20,
-                open_command: AppCommand::Function(Function::RunShellCommand(
-                    command.to_string(),
-                )),
+                open_command: AppCommand::Function(Function::RunShellCommand(command.to_string())),
                 display_name: format!("Shell Command: {}", command),
                 icons: None,
                 search_name: "".to_string(),
@@ -591,14 +589,14 @@ fn execute_query(tile: &mut Tile, id: Id) -> Task<Message> {
         }
     }
 
-            if tile.page != Page::FileSearch {
-                tile.handle_search_query_changed();
-            } else {
-                tile.results = search_for_file(
-                    &tile.query_lc,
-                    tile.config.search_dirs.iter().map(|x| x.as_str()).collect(),
-                );
-            }
+    if tile.page != Page::FileSearch {
+        tile.handle_search_query_changed();
+    } else {
+        tile.results = search_for_file(
+            &tile.query_lc,
+            tile.config.search_dirs.iter().map(|x| x.as_str()).collect(),
+        );
+    }
 
     if !tile.results.is_empty() {
         tile.results.par_sort_by_key(|x| -x.ranking);

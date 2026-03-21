@@ -3,9 +3,9 @@ use std::collections::HashMap;
 
 use crate::app::apps::{App, AppCommand, ICNS_ICON};
 use crate::commands::Function;
+use crate::debounce::DebouncePolicy;
 use crate::utils::icns_data_to_handle;
 use crate::{app::tile::ExtSender, clipboard::ClipBoardContentType};
-use crate::debounce::DebouncePolicy;
 use iced::time::Duration;
 
 pub mod apps;
@@ -84,7 +84,7 @@ pub enum Message {
     SwitchToPage(Page),
     ClipboardHistory(ClipBoardContentType),
     ChangeFocus(ArrowKey, u32),
-    DebouncedSearch(Id)
+    DebouncedSearch(Id),
 }
 
 /// The window settings for rustcast
@@ -166,7 +166,7 @@ impl DebouncePolicy for Page {
             Page::Main => None,
             Page::FileSearch => Some(Duration::from_millis(300)),
             Page::ClipboardHistory => None,
-            Page::EmojiSearch => Some(Duration::from_millis(300))
+            Page::EmojiSearch => Some(Duration::from_millis(300)),
         }
     }
 }
