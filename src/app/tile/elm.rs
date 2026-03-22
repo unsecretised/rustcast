@@ -61,6 +61,10 @@ pub fn new(hotkey: HotKey, config: &Config) -> (Tile, Task<Message>) {
         recent_actions.persist_async();
     }
 
+    if !config.remember_recent_actions {
+        recent_actions.clear_and_delete_async();
+    }
+
     let hotkeys = Hotkeys {
         toggle: hotkey,
         clipboard_hotkey: config
@@ -167,7 +171,7 @@ pub fn view(tile: &Tile, wid: window::Id) -> Element<'_, Message> {
             .height(height as u32);
 
         let text = if tile.query_lc.is_empty() {
-            if tile.page == Page::Main {
+            if tile.page == Page::Main && tile.config.remember_recent_actions {
                 "Recent actions".to_string()
             } else {
                 tile.page.to_string()

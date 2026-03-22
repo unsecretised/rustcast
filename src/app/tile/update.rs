@@ -319,6 +319,17 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
             ])
         }
 
+        Message::ClearRecentActions => {
+            tile.clear_recent_actions();
+            if tile.page == Page::Main && tile.query_lc.is_empty() {
+                window::latest()
+                    .map(|x| x.unwrap())
+                    .map(|id| Message::SearchQueryChanged(String::new(), id))
+            } else {
+                Task::none()
+            }
+        }
+
         Message::SwitchToPage(page) => {
             tile.page = page;
             let task = match tile.page {
@@ -502,9 +513,10 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
 
         Message::SetConfig(config) => {
             let mut final_config = tile.config.clone();
+            let mut refresh_recent_actions = false;
             match config {
                 SetConfigFields::ToggleHotkey(hk) => final_config.toggle_hotkey = hk,
-                SetConfigFields::ClipboardHotkey(hk) => final_config.toggle_hotkey = hk,
+                SetConfigFields::ClipboardHotkey(hk) => final_config.clipboard_hotkey = hk,
                 //                SetConfigFields::Modes(modes) => final_config.modes = modes,
                 //                SetConfigFields::Aliases(aliases) => final_config.aliases = aliases,
                 //                SetConfigFields::SearchDirs(dirs) => final_config.search_dirs = dirs,
@@ -515,6 +527,10 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
                     final_config.haptic_feedback = haptic_feedback
                 }
                 SetConfigFields::ShowMenubarIcon(show) => final_config.show_trayicon = show,
+                SetConfigFields::RememberRecentActions(remember) => {
+                    final_config.remember_recent_actions = remember;
+                    refresh_recent_actions = true;
+                }
                 SetConfigFields::SetThemeFields(SetConfigThemeFields::Font(fnt)) => {
                     final_config.theme.font = Some(fnt)
                 }
@@ -539,10 +555,20 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
                     final_config.aliases = tile.config.aliases.clone();
                     final_config.search_dirs = tile.config.search_dirs.clone();
                     final_config.modes = tile.config.modes.clone();
+                    refresh_recent_actions = true;
                 }
             };
 
             tile.config = final_config;
+
+            if refresh_recent_actions {
+                tile.refresh_recent_actions();
+                if tile.page == Page::Main && tile.query_lc.is_empty() {
+                    return window::latest()
+                        .map(|x| x.unwrap())
+                        .map(|id| Message::SearchQueryChanged(String::new(), id));
+                }
+            }
 
             Task::none()
         }

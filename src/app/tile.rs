@@ -272,10 +272,18 @@ impl Tile {
     }
 
     pub fn recent_results(&self) -> Vec<App> {
+        if !self.config.remember_recent_actions {
+            return Vec::new();
+        }
+
         self.recent_actions.resolve(|key| self.options.get(key))
     }
 
     pub fn record_recent_action(&mut self, key: &str) {
+        if !self.config.remember_recent_actions {
+            return;
+        }
+
         self.recent_actions.record(key);
     }
 
@@ -284,6 +292,11 @@ impl Tile {
     }
 
     pub fn refresh_recent_actions(&mut self) {
+        if !self.config.remember_recent_actions {
+            self.recent_actions.clear_and_delete_async();
+            return;
+        }
+
         let mut changed = self
             .recent_actions
             .set_limit(self.config.recent_actions_limit);
@@ -295,6 +308,10 @@ impl Tile {
         if changed {
             self.recent_actions.persist_async();
         }
+    }
+
+    pub fn clear_recent_actions(&mut self) {
+        self.recent_actions.clear_and_delete_async();
     }
 
     /// Gets the frontmost application to focus later.

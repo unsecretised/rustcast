@@ -1,11 +1,15 @@
 use std::collections::HashSet;
 use std::fs;
 use std::io;
+use std::io::Write;
 use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
 use crate::app::apps::App;
+
+#[cfg(unix)]
+use std::os::unix::fs::OpenOptionsExt;
 
 const RECENT_ACTIONS_SCHEMA_VERSION: u32 = 1;
 
@@ -78,6 +82,24 @@ impl RecentActions {
         }
 
         self.persist_async();
+    }
+
+    pub fn clear(&mut self) -> bool {
+        let had_keys = !self.keys.is_empty();
+        self.keys.clear();
+        had_keys
+    }
+
+    pub fn clear_and_delete_async(&mut self) {
+        self.clear();
+        self.delete_storage_file_async();
+    }
+
+    pub fn delete_storage_file_async(&self) {
+        let path = self.storage_path.clone();
+        std::thread::spawn(move || {
+            let _ = remove_storage_file(path.as_path());
+        });
     }
 
     fn record_without_persist(&mut self, key: &str) -> bool {
@@ -154,10 +176,26 @@ fn persist_to_disk(path: &Path, payload: &RecentActionsFile) -> io::Result<()> {
     let serialized =
         serde_json::to_vec(payload).map_err(|error| io::Error::other(error.to_string()))?;
     let tmp_path = path.with_extension("json.tmp");
+    let mut options = fs::OpenOptions::new();
+    options.create(true).write(true).truncate(true);
+    #[cfg(unix)]
+    {
+        options.mode(0o600);
+    }
 
-    fs::write(&tmp_path, serialized)?;
+    let mut tmp_file = options.open(&tmp_path)?;
+    tmp_file.write_all(&serialized)?;
+    tmp_file.sync_all()?;
     fs::rename(tmp_path, path)?;
     Ok(())
+}
+
+fn remove_storage_file(path: &Path) -> io::Result<()> {
+    match fs::remove_file(path) {
+        Ok(()) => Ok(()),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(()),
+        Err(error) => Err(error),
+    }
 }
 
 #[cfg(test)]
@@ -244,5 +282,20 @@ mod tests {
         assert_eq!(loaded.keys, vec!["iterm", "settings"]);
 
         let _ = fs::remove_file(path);
+    }
+
+    #[test]
+    fn clear_and_delete_removes_file() {
+        let path = temp_file_path("delete");
+        let mut recents = RecentActions::load_with_path(5, path.clone());
+        recents.record_without_persist("settings");
+        recents
+            .persist_blocking()
+            .expect("recent actions should persist");
+        assert!(path.exists());
+
+        recents.clear();
+        remove_storage_file(path.as_path()).expect("recent actions file should be removed");
+        assert!(!path.exists());
     }
 }

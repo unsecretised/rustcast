@@ -23,6 +23,9 @@ show_trayicon = true
 # hotkey for opening clipboard history
 clipboard_hotkey = "SUPER+SHIFT+2"
 
+# persist and show recent actions when search is empty
+remember_recent_actions = true
+
 # number of recent actions to show when search is empty
 recent_actions_limit = 5
 
