@@ -90,11 +90,11 @@ configure [The list](docs/config.toml).
 - [x] Image rendering from clipboard history (13/3/2026)
 - [x] File searching (11/3/2026)
 - [x] CTRL n / p (vim motions) navigation for search results (5/3/2026)
+- [x] Settings Panel (22/3/2026)
 
 ### Planned:
 
 - [ ] Popup note-taking
-- [ ] Settings Panel
 - [ ] Plugin Support (Partially implemented on 15/12/2025)
 - [ ] Hyperkey - Map CMD + OPT + CTRL + SHIFT to a physical key
 - [ ] Better hotkey picking
