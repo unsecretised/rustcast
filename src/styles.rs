@@ -1,7 +1,7 @@
 //! This handles most of the styling for the rustcast elements
 use crate::config::Theme as ConfigTheme;
 use iced::border::Radius;
-use iced::widget::{button, container};
+use iced::widget::{button, checkbox, container, slider};
 use iced::{Background, Border, Color, widget::text_input};
 
 /// Helper: mix base color with white (simple “tint”)
@@ -105,6 +105,72 @@ pub fn emoji_button_style(tile_theme: &ConfigTheme) -> button::Style {
             radius: Radius::new(10.0),
         },
         ..Default::default()
+    }
+}
+
+pub fn settings_text_input_item_style(theme: &ConfigTheme) -> text_input::Style {
+    let base = theme.bg_color();
+    let surface = glass_surface(base, false);
+    text_input::Style {
+        background: Background::Color(surface),
+        border: Border {
+            color: glass_border(theme.text_color(1.0), false),
+            width: 0.2,
+            radius: Radius::new(10.),
+        },
+        icon: theme.text_color(0.75),
+        placeholder: theme.text_color(0.50),
+        value: theme.text_color(1.0),
+        selection: with_alpha(theme.text_color(1.0), 0.20),
+    }
+}
+
+pub fn settings_save_button_style(theme: &ConfigTheme) -> button::Style {
+    button::Style {
+        text_color: theme.text_color(1.),
+        background: Some(Background::Color(with_alpha(theme.bg_color(), 0.3))),
+        border: Border {
+            color: theme.text_color(0.7),
+            width: 0.1,
+            radius: Radius::new(5),
+        },
+        ..Default::default()
+    }
+}
+
+pub fn settings_checkbox_style(theme: &ConfigTheme) -> checkbox::Style {
+    checkbox::Style {
+        background: Background::Color(Color::TRANSPARENT),
+        icon_color: theme.text_color(1.),
+        border: iced::Border {
+            color: theme.text_color(1.),
+            width: 1.,
+            radius: Radius::new(2.),
+        },
+        text_color: None,
+    }
+}
+
+pub fn settings_slider_style(theme: &ConfigTheme) -> slider::Style {
+    slider::Style {
+        rail: slider::Rail {
+            backgrounds: (
+                Background::Color(theme.text_color(1.)),
+                Background::Color(theme.bg_color()),
+            ),
+            width: 1.5,
+            border: Border {
+                color: theme.text_color(1.),
+                width: 0.3,
+                radius: Radius::new(0),
+            },
+        },
+        handle: slider::Handle {
+            shape: slider::HandleShape::Circle { radius: 10. },
+            background: Background::Color(theme.text_color(1.)),
+            border_width: 0.1,
+            border_color: Color::WHITE,
+        },
     }
 }
 

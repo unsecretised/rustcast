@@ -180,7 +180,7 @@ impl Tile {
             keyboard,
             Subscription::run(handle_recipient),
             Subscription::run(check_version),
-            Subscription::run(handle_hot_reloading),
+            //            Subscription::run(handle_hot_reloading),
             Subscription::run(handle_clipboard_history),
             window::close_events().map(Message::HideWindow),
             keyboard::listen().filter_map(|event| {
@@ -279,6 +279,7 @@ impl Tile {
     }
 }
 
+#[allow(unused)]
 /// This is the subscription function that handles hot reloading of the config
 fn handle_hot_reloading() -> impl futures::Stream<Item = Message> {
     stream::channel(100, async |mut output| {

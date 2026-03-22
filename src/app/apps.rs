@@ -110,7 +110,7 @@ impl App {
             },
             App {
                 ranking: 0,
-                open_command: AppCommand::Function(Function::OpenPrefPane),
+                open_command: AppCommand::Message(Message::SwitchToPage(Page::Settings)),
                 desc: RUSTCAST_DESC_NAME.to_string(),
                 icons: icons.clone(),
                 display_name: "Open RustCast Preferences".to_string(),

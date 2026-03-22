@@ -15,6 +15,7 @@ use rayon::iter::ParallelIterator;
 use rayon::slice::ParallelSliceMut;
 
 use crate::app::pages::emoji::emoji_page;
+use crate::app::pages::settings::settings_page;
 use crate::app::tile::{AppIndex, Hotkeys};
 use crate::app::{DEFAULT_WINDOW_HEIGHT, ToApp, ToApps};
 use crate::config::Theme;
@@ -114,40 +115,39 @@ pub fn view(tile: &Tile, wid: window::Id) -> Element<'_, Message> {
             Direction::Vertical(Scrollbar::hidden())
         };
 
-        let results = if tile.page == Page::ClipboardHistory {
-            clipboard_view(
+        let results = match tile.page {
+            Page::ClipboardHistory => clipboard_view(
                 tile.clipboard_content.clone(),
                 tile.focus_id,
                 tile.config.theme.clone(),
-            )
-        } else if tile.page == Page::EmojiSearch {
-            emoji_page(
+            ),
+            Page::EmojiSearch => emoji_page(
                 tile.config.theme.clone(),
                 tile.emoji_apps
                     .search_prefix(&tile.query_lc)
                     .map(|x| x.to_owned())
                     .collect(),
                 tile.focus_id,
-            )
-        } else {
-            container(Column::from_iter(tile.results.iter().enumerate().map(
-                |(i, app)| {
+            ),
+            Page::Settings => settings_page(tile.config.clone()),
+            Page::FileSearch | Page::Main => container(Column::from_iter(
+                tile.results.iter().enumerate().map(|(i, app)| {
                     app.clone()
                         .render(tile.config.theme.clone(), i as u32, tile.focus_id)
-                },
-            )))
-            .into()
+                }),
+            ))
+            .into(),
         };
 
         let results_count = match &tile.page {
             Page::Main | Page::EmojiSearch | Page::FileSearch => tile.results.len(),
             Page::ClipboardHistory => tile.clipboard_content.len(),
+            Page::Settings => 0,
         };
 
-        let height = if tile.page == Page::ClipboardHistory {
-            385
-        } else {
-            std::cmp::min(tile.results.len() * 60, 290)
+        let height = match tile.page {
+            Page::ClipboardHistory | Page::Settings => 385,
+            _ => std::cmp::min(tile.results.len() * 60, 290),
         };
 
         let scrollable = Scrollable::with_direction(results, scrollbar_direction)
@@ -155,12 +155,12 @@ pub fn view(tile: &Tile, wid: window::Id) -> Element<'_, Message> {
             .height(height as u32);
 
         let text = if !tile.query_lc.is_empty() {
-            if results_count == 1 {
-                "1 result found".to_string()
-            } else if results_count == 0 {
-                "No results found".to_string()
-            } else {
-                format!("{results_count} results found")
+            match results_count {
+                1 => "1 result found".to_string(),
+                0 => "No results found".to_string(),
+                count => {
+                    format!("{count} results found")
+                }
             }
         } else {
             tile.page.to_string()

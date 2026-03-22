@@ -15,6 +15,9 @@ use rayon::iter::IntoParallelRefIterator;
 use rayon::iter::ParallelIterator;
 use rayon::slice::ParallelSliceMut;
 
+use crate::app::SetConfigBufferFields;
+use crate::app::SetConfigFields;
+use crate::app::SetConfigThemeFields;
 use crate::app::ToApp;
 use crate::app::ToApps;
 use crate::app::WINDOW_WIDTH;
@@ -85,8 +88,17 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
         }
 
         Message::EscKeyPressed(id) => {
-            if tile.page != Page::Main {
-                return Task::done(Message::SwitchToPage(Page::Main));
+            match tile.page {
+                Page::Main => {}
+                Page::Settings => {
+                    return Task::batch([
+                        Task::done(Message::WriteConfig),
+                        Task::done(Message::SwitchToPage(Page::Main)),
+                    ]);
+                }
+                _ => {
+                    return Task::done(Message::SwitchToPage(Page::Main));
+                }
             }
 
             if tile.query_lc.is_empty() {
@@ -163,6 +175,7 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
                     Page::Main | Page::FileSearch => 66.5,
                     Page::ClipboardHistory => 50.,
                     Page::EmojiSearch => 5.,
+                    Page::Settings => 0.,
                 };
 
                 let (wrapped_up, wrapped_down) = match &key {
@@ -319,17 +332,17 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
 
         Message::SwitchToPage(page) => {
             tile.page = page;
-            let task = if tile.page == Page::ClipboardHistory {
-                window::latest().map(|x| {
+            let task = match tile.page {
+                Page::ClipboardHistory | Page::Settings => window::latest().map(|x| {
                     let id = x.unwrap();
                     Message::ResizeWindow(
                         id,
                         ((7 * 55) + 35 + DEFAULT_WINDOW_HEIGHT as usize) as f32,
                     )
-                })
-            } else {
-                Task::none()
+                }),
+                _ => Task::none(),
             };
+
             Task::batch([
                 Task::done(Message::ClearSearchQuery),
                 Task::done(Message::ClearSearchResults),
@@ -341,25 +354,19 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
             command.execute(&tile.config);
 
             let return_focus_task = match &command {
-                Function::OpenApp(_) | Function::OpenPrefPane | Function::GoogleSearch(_) => {
-                    Task::none()
-                }
+                Function::OpenApp(_) | Function::GoogleSearch(_) => Task::none(),
                 _ => Task::done(Message::ReturnFocus),
             };
 
-            if tile.config.buffer_rules.clear_on_enter {
-                if tile.visible {
-                    window::latest()
-                        .map(|x| x.unwrap())
-                        .map(Message::HideWindow)
-                        .chain(Task::done(Message::ClearSearchQuery))
-                        .chain(return_focus_task)
-                } else {
-                    Task::none()
-                }
-            } else {
-                Task::none()
+            if !tile.config.buffer_rules.clear_on_enter || !tile.visible {
+                return Task::none();
             }
+
+            window::latest()
+                .map(|x| x.unwrap())
+                .map(Message::HideWindow)
+                .chain(Task::done(Message::ClearSearchQuery))
+                .chain(return_focus_task)
         }
 
         Message::HideWindow(a) => {
@@ -367,6 +374,8 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
             tile.visible = false;
             tile.focused = false;
             tile.page = Page::Main;
+            tile.focus_id = 0;
+
             Task::batch([window::close(a), Task::done(Message::ClearSearchResults)])
         }
 
@@ -387,6 +396,7 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
                     tile.query_lc.pop();
                 }
             }
+
             let updated_query = tile.query.clone();
             Task::batch([
                 operation::focus("query"),
@@ -461,6 +471,69 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
             }
         }
 
+        Message::SetConfig(config) => {
+            let mut final_config = tile.config.clone();
+            match config {
+                SetConfigFields::ToggleHotkey(hk) => final_config.toggle_hotkey = hk,
+                SetConfigFields::ClipboardHotkey(hk) => final_config.toggle_hotkey = hk,
+                //                SetConfigFields::Modes(modes) => final_config.modes = modes,
+                //                SetConfigFields::Aliases(aliases) => final_config.aliases = aliases,
+                //                SetConfigFields::SearchDirs(dirs) => final_config.search_dirs = dirs,
+                SetConfigFields::SearchUrl(url) => final_config.search_url = url,
+                SetConfigFields::PlaceHolder(placeholder) => final_config.placeholder = placeholder,
+                SetConfigFields::DebounceDelay(delay) => final_config.debounce_delay = delay,
+                SetConfigFields::HapticFeedback(haptic_feedback) => {
+                    final_config.haptic_feedback = haptic_feedback
+                }
+                SetConfigFields::ShowMenubarIcon(show) => final_config.show_trayicon = show,
+                SetConfigFields::SetThemeFields(SetConfigThemeFields::Font(fnt)) => {
+                    final_config.theme.font = Some(fnt)
+                }
+                SetConfigFields::SetThemeFields(SetConfigThemeFields::TextColor(r, g, b)) => {
+                    final_config.theme.text_color = (r, g, b)
+                }
+                SetConfigFields::SetThemeFields(SetConfigThemeFields::ShowIcons(icns)) => {
+                    final_config.theme.show_icons = icns
+                }
+                SetConfigFields::SetThemeFields(SetConfigThemeFields::BackgroundColor(r, g, b)) => {
+                    final_config.theme.background_color = (r, g, b)
+                }
+                SetConfigFields::SetBufferFields(SetConfigBufferFields::ClearOnHide(clear)) => {
+                    final_config.buffer_rules.clear_on_hide = clear;
+                }
+                SetConfigFields::SetBufferFields(SetConfigBufferFields::ClearOnEnter(clear)) => {
+                    final_config.buffer_rules.clear_on_enter = clear
+                }
+            };
+
+            tile.config = final_config;
+
+            Task::none()
+        }
+
+        Message::WriteConfig => {
+            let config_file_path =
+                std::env::var("HOME").unwrap_or("".to_string()) + "/.config/rustcast/config.toml";
+
+            let config_string = match toml::to_string_pretty(&tile.config) {
+                Ok(a) => a,
+                Err(e) => {
+                    log::error!("Invalid config: {e}");
+                    return Task::none();
+                }
+            };
+
+            fs::write(config_file_path, config_string)
+                .map_err(|e| {
+                    log::error!("Error writing to config file: {e}");
+                    log::error!("Config file changes not saved");
+                    e
+                })
+                .ok();
+
+            Task::none()
+        }
+
         Message::DebouncedSearch(id) => {
             // Only execute if this is still the most recent debounce timer
             if !tile.debouncer.is_ready() {
@@ -507,17 +580,13 @@ fn execute_query(tile: &mut Tile, id: Id) -> Task<Message> {
     let mut task = Task::none();
     let prev_size = tile.results.len();
 
-    if tile.page == Page::ClipboardHistory && tile.query_lc != "main" {
-        return Task::none();
-    } else if tile.page == Page::EmojiSearch && tile.query_lc.is_empty() {
-        tile.results = if tile.query_lc.is_empty() {
-            Vec::new()
-        } else {
-            tile.emoji_apps
-                .search_prefix(&tile.query_lc)
-                .map(|x| x.to_owned())
-                .collect()
-        };
+    match tile.page {
+        Page::ClipboardHistory | Page::Settings => {
+            if tile.query_lc != "main" {
+                return Task::none();
+            }
+        }
+        _ => {}
     }
 
     if tile.query_lc.is_empty()
@@ -589,13 +658,14 @@ fn execute_query(tile: &mut Tile, id: Id) -> Task<Message> {
         }
     }
 
-    if tile.page != Page::FileSearch {
-        tile.handle_search_query_changed();
-    } else {
-        tile.results = search_for_file(
-            &tile.query_lc,
-            tile.config.search_dirs.iter().map(|x| x.as_str()).collect(),
-        );
+    match tile.page {
+        Page::FileSearch => {
+            tile.results = search_for_file(
+                &tile.query_lc,
+                tile.config.search_dirs.iter().map(|x| x.as_str()).collect(),
+            );
+        }
+        _ => tile.handle_search_query_changed(),
     }
 
     if !tile.results.is_empty() {
@@ -604,17 +674,17 @@ fn execute_query(tile: &mut Tile, id: Id) -> Task<Message> {
         let new_length = tile.results.len();
         let max_elem = min(5, new_length);
 
-        if prev_size != new_length {
-            return task.chain(Task::batch([
-                Task::done(Message::ResizeWindow(
-                    id,
-                    ((max_elem * 55) + 35 + DEFAULT_WINDOW_HEIGHT as usize) as f32,
-                )),
-                Task::done(Message::ChangeFocus(ArrowKey::Left, 1)),
-            ]));
-        } else {
+        if prev_size == new_length {
             return task;
         }
+
+        return task.chain(Task::batch([
+            Task::done(Message::ResizeWindow(
+                id,
+                ((max_elem * 55) + 35 + DEFAULT_WINDOW_HEIGHT as usize) as f32,
+            )),
+            Task::done(Message::ChangeFocus(ArrowKey::Left, 1)),
+        ]));
     }
 
     if is_valid_url(&tile.query) {
