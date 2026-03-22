@@ -104,6 +104,7 @@ pub enum Message {
 
 #[derive(Debug, Clone)]
 pub enum SetConfigFields {
+    ToDefault,
     ToggleHotkey(String),
     ClipboardHotkey(String),
     PlaceHolder(String),

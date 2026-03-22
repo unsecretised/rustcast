@@ -292,7 +292,10 @@ pub fn settings_page(config: Config) -> Element<'static, Message> {
             font_family.into(),
             text_clr.into(),
             bg_clr.into(),
-            savebutton(theme.clone()),
+            Row::from_iter([savebutton(theme.clone()), default_button(theme.clone())])
+                .spacing(5)
+                .width(Length::Fill)
+                .into(),
         ])
         .spacing(10),
     ))
@@ -314,6 +317,19 @@ fn savebutton(theme: Theme) -> Element<'static, Message> {
     .style(move |_, _| settings_save_button_style(&theme))
     .width(Length::Fill)
     .on_press(Message::WriteConfig)
+    .into()
+}
+
+fn default_button(theme: Theme) -> Element<'static, Message> {
+    Button::new(
+        Text::new("To default")
+            .align_x(Alignment::Center)
+            .width(Length::Fill)
+            .font(theme.font()),
+    )
+    .style(move |_, _| settings_save_button_style(&theme))
+    .width(Length::Fill)
+    .on_press(Message::SetConfig(SetConfigFields::ToDefault))
     .into()
 }
 

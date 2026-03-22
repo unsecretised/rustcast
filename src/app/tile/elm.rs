@@ -155,7 +155,9 @@ pub fn view(tile: &Tile, wid: window::Id) -> Element<'_, Message> {
             .id("results")
             .height(height as u32);
 
-        let text = if !tile.query_lc.is_empty() {
+        let text = if tile.query_lc.is_empty() {
+            tile.page.to_string()
+        } else {
             match results_count {
                 1 => "1 result found".to_string(),
                 0 => "No results found".to_string(),
@@ -163,8 +165,6 @@ pub fn view(tile: &Tile, wid: window::Id) -> Element<'_, Message> {
                     format!("{count} results found")
                 }
             }
-        } else {
-            tile.page.to_string()
         };
 
         let contents = container(

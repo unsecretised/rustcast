@@ -542,6 +542,7 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
                 SetConfigFields::SetBufferFields(SetConfigBufferFields::ClearOnEnter(clear)) => {
                     final_config.buffer_rules.clear_on_enter = clear
                 }
+                SetConfigFields::ToDefault => final_config = Config::default(),
             };
 
             tile.config = final_config;

@@ -2,11 +2,11 @@
 pub mod elm;
 pub mod update;
 
+use crate::app::apps::App;
 use crate::app::{ArrowKey, Message, Move, Page};
 use crate::clipboard::ClipBoardContentType;
 use crate::config::Config;
 use crate::debounce::Debouncer;
-use crate::{app::apps::App, platform::default_app_paths};
 
 use arboard::Clipboard;
 use global_hotkey::hotkey::HotKey;
@@ -31,8 +31,6 @@ use tray_icon::TrayIcon;
 
 use std::collections::HashMap;
 use std::fmt::Debug;
-use std::fs;
-use std::path::Path;
 use std::str::FromStr;
 use std::time::Duration;
 
@@ -181,7 +179,6 @@ impl Tile {
             keyboard,
             Subscription::run(handle_recipient),
             Subscription::run(check_version),
-            //            Subscription::run(handle_hot_reloading),
             Subscription::run(handle_clipboard_history),
             Subscription::run(handle_file_search),
             window::close_events().map(Message::HideWindow),
@@ -279,57 +276,6 @@ impl Tile {
             app.activateWithOptions(NSApplicationActivationOptions::ActivateIgnoringOtherApps);
         }
     }
-}
-
-#[allow(unused)]
-/// This is the subscription function that handles hot reloading of the config
-fn handle_hot_reloading() -> impl futures::Stream<Item = Message> {
-    stream::channel(100, async |mut output| {
-        let config_path =
-            &(std::env::var("HOME").unwrap_or("".to_owned()) + "/.config/rustcast/config.toml");
-        let mut last_modified = fs::metadata(config_path).unwrap().modified().unwrap();
-
-        let paths = default_app_paths();
-        let mut total_files: usize = paths
-            .par_iter()
-            .map(|dir| count_dirs_in_dir(Path::new(dir)))
-            .sum();
-
-        loop {
-            let last_modified_check = fs::metadata(config_path).unwrap().modified().unwrap();
-
-            let current_total_files: usize = paths
-                .par_iter()
-                .map(|dir| count_dirs_in_dir(Path::new(dir)))
-                .sum();
-
-            if last_modified_check != last_modified {
-                last_modified = last_modified_check;
-                info!("Config file was modified");
-                let _ = output.send(Message::ReloadConfig).await;
-            } else if total_files != current_total_files {
-                total_files = current_total_files;
-                info!("App count was changed");
-                let _ = output.send(Message::ReloadConfig).await;
-            }
-
-            tokio::time::sleep(Duration::from_millis(1000)).await;
-        }
-    })
-}
-
-/// Helper fn for counting directories (since macos `.app`'s are directories) inside a directory
-fn count_dirs_in_dir(dir: impl AsRef<Path>) -> usize {
-    // Read the directory; if it fails, treat as empty
-    let entries = match fs::read_dir(dir) {
-        Ok(e) => e,
-        Err(_) => return 0,
-    };
-
-    entries
-        .filter_map(|entry| entry.ok())
-        .filter(|entry| entry.file_type().map(|t| t.is_dir()).unwrap_or(false))
-        .count()
 }
 
 /// This is the subscription function that handles hotkeys, e.g. for hiding / showing the window
