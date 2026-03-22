@@ -3,12 +3,11 @@ pub mod elm;
 mod recent_actions;
 pub mod update;
 
+use crate::app::apps::App;
 use crate::app::{ArrowKey, Message, Move, Page};
 use crate::clipboard::ClipBoardContentType;
 use crate::config::Config;
 use crate::debounce::Debouncer;
-use crate::utils::open_settings;
-use crate::{app::apps::App, platform::default_app_paths};
 
 use arboard::Clipboard;
 use global_hotkey::hotkey::HotKey;
@@ -28,12 +27,11 @@ use log::{info, warn};
 use objc2::rc::Retained;
 use objc2_app_kit::NSRunningApplication;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
+use tokio::io::AsyncBufReadExt;
 use tray_icon::TrayIcon;
 
 use std::collections::HashMap;
 use std::fmt::Debug;
-use std::fs;
-use std::path::Path;
 use std::str::FromStr;
 use std::time::Duration;
 
@@ -142,6 +140,7 @@ pub struct Tile {
     sender: Option<ExtSender>,
     page: Page,
     pub height: f32,
+    pub file_search_sender: Option<tokio::sync::watch::Sender<(String, Vec<String>)>>,
     debouncer: Debouncer,
 }
 
@@ -181,7 +180,7 @@ impl Tile {
                 ..
             }) => {
                 if cha.to_string() == "," {
-                    open_settings();
+                    return Some(Message::SwitchToPage(Page::Settings));
                 }
                 None
             }
@@ -192,8 +191,8 @@ impl Tile {
             keyboard,
             Subscription::run(handle_recipient),
             Subscription::run(check_version),
-            Subscription::run(handle_hot_reloading),
             Subscription::run(handle_clipboard_history),
+            Subscription::run(handle_file_search),
             window::close_events().map(Message::HideWindow),
             keyboard::listen().filter_map(|event| {
                 if let keyboard::Event::KeyPressed { key, modifiers, .. } = event {
@@ -317,56 +316,6 @@ impl Tile {
     }
 }
 
-/// This is the subscription function that handles hot reloading of the config
-fn handle_hot_reloading() -> impl futures::Stream<Item = Message> {
-    stream::channel(100, async |mut output| {
-        let config_path =
-            &(std::env::var("HOME").unwrap_or("".to_owned()) + "/.config/rustcast/config.toml");
-        let mut last_modified = fs::metadata(config_path).unwrap().modified().unwrap();
-
-        let paths = default_app_paths();
-        let mut total_files: usize = paths
-            .par_iter()
-            .map(|dir| count_dirs_in_dir(Path::new(dir)))
-            .sum();
-
-        loop {
-            let last_modified_check = fs::metadata(config_path).unwrap().modified().unwrap();
-
-            let current_total_files: usize = paths
-                .par_iter()
-                .map(|dir| count_dirs_in_dir(Path::new(dir)))
-                .sum();
-
-            if last_modified_check != last_modified {
-                last_modified = last_modified_check;
-                info!("Config file was modified");
-                let _ = output.send(Message::ReloadConfig).await;
-            } else if total_files != current_total_files {
-                total_files = current_total_files;
-                info!("App count was changed");
-                let _ = output.send(Message::ReloadConfig).await;
-            }
-
-            tokio::time::sleep(Duration::from_millis(1000)).await;
-        }
-    })
-}
-
-/// Helper fn for counting directories (since macos `.app`'s are directories) inside a directory
-fn count_dirs_in_dir(dir: impl AsRef<Path>) -> usize {
-    // Read the directory; if it fails, treat as empty
-    let entries = match fs::read_dir(dir) {
-        Ok(e) => e,
-        Err(_) => return 0,
-    };
-
-    entries
-        .filter_map(|entry| entry.ok())
-        .filter(|entry| entry.file_type().map(|t| t.is_dir()).unwrap_or(false))
-        .count()
-}
-
 /// This is the subscription function that handles hotkeys, e.g. for hiding / showing the window
 fn handle_hotkeys() -> impl futures::Stream<Item = Message> {
     stream::channel(100, async |mut output| {
@@ -411,6 +360,145 @@ fn handle_clipboard_history() -> impl futures::Stream<Item = Message> {
                 prev_byte_rep = byte_rep;
             }
             tokio::time::sleep(Duration::from_millis(100)).await;
+        }
+    })
+}
+
+/// Read mdfind stdout line-by-line, sending batched results to the UI.
+///
+/// Returns when stdout reaches EOF, the receiver signals a new query, or
+/// max results are reached. Caller is responsible for process lifetime.
+async fn read_mdfind_results(
+    stdout: tokio::process::ChildStdout,
+    home_dir: &str,
+    receiver: &mut tokio::sync::watch::Receiver<(String, Vec<String>)>,
+    output: &mut iced::futures::channel::mpsc::Sender<Message>,
+) {
+    use crate::app::{FILE_SEARCH_BATCH_SIZE, FILE_SEARCH_MAX_RESULTS};
+
+    let mut reader = tokio::io::BufReader::new(stdout);
+    let mut batch: Vec<crate::app::apps::App> = Vec::with_capacity(FILE_SEARCH_BATCH_SIZE as usize);
+    let mut total_sent: u32 = 0;
+
+    loop {
+        let mut line = String::new();
+        let read_result = tokio::select! {
+            result = reader.read_line(&mut line) => result,
+            _ = receiver.changed() => {
+                // New query arrived — caller will handle it.
+                break;
+            }
+        };
+
+        match read_result {
+            Ok(0) => {
+                // EOF — flush remaining batch.
+                if !batch.is_empty() {
+                    output
+                        .send(Message::FileSearchResult(std::mem::take(&mut batch)))
+                        .await
+                        .ok();
+                }
+                break;
+            }
+            Ok(_) => {
+                if let Some(app) = crate::commands::path_to_app(line.trim(), home_dir) {
+                    batch.push(app);
+                    total_sent += 1;
+                }
+                if batch.len() as u32 >= FILE_SEARCH_BATCH_SIZE {
+                    output
+                        .send(Message::FileSearchResult(std::mem::take(&mut batch)))
+                        .await
+                        .ok();
+                }
+                if total_sent >= FILE_SEARCH_MAX_RESULTS {
+                    if !batch.is_empty() {
+                        output
+                            .send(Message::FileSearchResult(std::mem::take(&mut batch)))
+                            .await
+                            .ok();
+                    }
+                    break;
+                }
+            }
+            Err(_) => break,
+        }
+    }
+}
+
+/// Async subscription that spawns `mdfind` for file search queries.
+///
+/// Uses a `watch` channel so the Tile can push new (query, dirs) pairs.
+/// Each query change cancels any running `mdfind` and starts a fresh one.
+fn handle_file_search() -> impl futures::Stream<Item = Message> {
+    stream::channel(100, async |mut output| {
+        let (sender, mut receiver) =
+            tokio::sync::watch::channel((String::new(), Vec::<String>::new()));
+        output
+            .send(Message::SetFileSearchSender(sender))
+            .await
+            .expect("Failed to send file search sender.");
+
+        let home_dir = std::env::var("HOME").unwrap_or_else(|_| "/".to_string());
+        assert!(!home_dir.is_empty(), "HOME must not be empty.");
+
+        let mut child: Option<tokio::process::Child> = None;
+
+        loop {
+            if receiver.changed().await.is_err() {
+                return;
+            }
+            receiver.borrow_and_update();
+
+            // Kill previous mdfind if still running.
+            if let Some(ref mut proc) = child {
+                proc.kill().await.ok();
+                proc.wait().await.ok();
+            }
+            child = None;
+
+            let (query, dirs) = receiver.borrow().clone();
+            assert!(query.len() < 1024, "Query too long.");
+
+            if query.len() < 2 {
+                output.send(Message::FileSearchClear).await.ok();
+                continue;
+            }
+
+            // The query is passed as a -name argument to mdfind. mdfind interprets
+            // this as a substring match on filenames — not as a glob or shell expression.
+            // Passed via args (not shell), so no shell injection risk.
+            // When dirs is empty, omit -onlyin so mdfind searches system-wide.
+            let mut args: Vec<String> = vec!["-name".to_string(), query.clone()];
+            for dir in &dirs {
+                let expanded = dir.replace("~", &home_dir);
+                args.push("-onlyin".to_string());
+                args.push(expanded);
+            }
+
+            let spawn_result = tokio::process::Command::new("mdfind")
+                .args(&args)
+                .stdout(std::process::Stdio::piped())
+                .stderr(std::process::Stdio::null())
+                .kill_on_drop(true)
+                .spawn();
+
+            let mut proc = match spawn_result {
+                Ok(p) => p,
+                Err(err) => {
+                    warn!("Failed to spawn mdfind: {err}");
+                    continue;
+                }
+            };
+
+            let stdout = match proc.stdout.take() {
+                Some(s) => s,
+                None => continue,
+            };
+            child = Some(proc);
+
+            read_mdfind_results(stdout, &home_dir, &mut receiver, &mut output).await;
         }
     })
 }

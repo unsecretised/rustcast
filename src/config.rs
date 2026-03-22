@@ -14,7 +14,7 @@ use crate::{
 };
 
 /// The main config struct (effectively the config file's "schema")
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
 #[serde(default)]
 pub struct Config {
     pub toggle_hotkey: String,
@@ -47,11 +47,7 @@ impl Default for Config {
             search_url: "https://google.com/search?q=%s".to_string(),
             haptic_feedback: false,
             show_trayicon: true,
-            search_dirs: vec![
-                "~/Documents".to_string(),
-                "~/Desktop".to_string(),
-                "~/Downloads".to_string(),
-            ],
+            search_dirs: vec!["~".to_string()],
             log_path: "/tmp/rustcast.log".to_string(),
             modes: HashMap::new(),
             aliases: HashMap::new(),
@@ -62,7 +58,7 @@ impl Default for Config {
 }
 
 /// The settings you can set for the theme
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
 #[serde(default)]
 pub struct Theme {
     pub text_color: (f32, f32, f32),
@@ -163,7 +159,7 @@ impl Theme {
 /// - clear_on_hide is whether the buffer should be cleared when the window is hidden
 /// - clear_on_enter is whether the buffer should be cleared when the user presses enter after
 ///   searching
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
 #[serde(default)]
 pub struct Buffer {
     pub clear_on_hide: bool,
@@ -182,7 +178,7 @@ impl Default for Buffer {
 /// Command is the command it will run when the button is clicked
 /// Icon_path is the path to an icon, but this is optional
 /// Alias is the text that is used to call this command / search for it
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
 pub struct Shelly {
     command: String,
     icon_path: Option<String>,

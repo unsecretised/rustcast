@@ -16,7 +16,7 @@ use tray_icon::{
 use crate::{
     app::{Message, tile::ExtSender},
     config::Config,
-    utils::{open_settings, open_url},
+    utils::open_url,
 };
 
 const DISCORD_LINK: &str = "https://discord.gg/bDfNYPbnC5";
@@ -124,7 +124,9 @@ fn init_event_handler(sender: ExtSender, hotkey_id: u32) {
                 open_url("https://github.com/unsecretised/rustcast/discussions/new?category=q-a");
             }
             "open_preferences" => {
-                open_settings();
+                runtime.spawn(async move {
+                    sender.clone().try_send(Message::OpenToSettings).unwrap();
+                });
             }
             "open_github_page" => {
                 open_url("https://github.com/unsecretised/rustcast");

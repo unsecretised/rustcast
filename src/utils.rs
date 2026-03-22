@@ -27,18 +27,6 @@ pub(crate) fn handle_from_icns(path: &Path) -> Option<Handle> {
     icns_data_to_handle(data)
 }
 
-/// Open the settings file with the system default editor
-pub fn open_settings() {
-    thread::spawn(move || {
-        NSWorkspace::new().openURL(&NSURL::fileURLWithPath(
-            &objc2_foundation::NSString::from_str(
-                &(std::env::var("HOME").unwrap_or("".to_string())
-                    + "/.config/rustcast/config.toml"),
-            ),
-        ));
-    });
-}
-
 /// Open a provided URL (Platform specific)
 pub fn open_url(url: &str) {
     let url = url.to_owned();

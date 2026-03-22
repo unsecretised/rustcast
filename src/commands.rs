@@ -3,15 +3,11 @@
 use std::{process::Command, thread};
 
 use arboard::Clipboard;
-use ignore::{DirEntry, WalkBuilder};
 use objc2_app_kit::NSWorkspace;
 use objc2_foundation::NSURL;
 
 use crate::{
-    app::{
-        ToApp,
-        apps::{App, AppCommand},
-    },
+    app::apps::{App, AppCommand},
     calculator::Expr,
     clipboard::ClipBoardContentType,
     config::Config,
@@ -27,7 +23,6 @@ pub enum Function {
     CopyToClipboard(ClipBoardContentType),
     GoogleSearch(String),
     Calculate(Expr),
-    OpenPrefPane,
     Quit,
 }
 
@@ -101,71 +96,38 @@ impl Function {
                 }
             },
 
-            Function::OpenPrefPane => {
-                thread::spawn(move || {
-                    NSWorkspace::new().openURL(&NSURL::fileURLWithPath(
-                        &objc2_foundation::NSString::from_str(
-                            &(std::env::var("HOME").unwrap_or("".to_string())
-                                + "/.config/rustcast/config.toml"),
-                        ),
-                    ));
-                });
-            }
             Function::Quit => std::process::exit(0),
         }
     }
 }
 
-pub fn search(home: String, name: &str) -> impl Iterator<Item = App> {
-    let mut builder = WalkBuilder::new(home);
-    builder.follow_links(false);
-    builder.threads(10);
-
-    let name_clone = name.to_string();
-    builder
-        .build()
-        .filter_map(move |x| {
-            if let Ok(ent) = x {
-                let name = ent.file_name().to_string_lossy();
-                if name.contains(&name_clone) && !name.starts_with(".") {
-                    Some(ent.to_app())
-                } else {
-                    None
-                }
-            } else {
-                None
-            }
-        })
-        .take(400)
-}
-
-pub fn search_for_file(name: &str, dirs: Vec<&str>) -> Vec<App> {
-    let home = std::env::var("HOME").unwrap_or_else(|_| "/".into());
-
-    dirs.iter().fold(Vec::with_capacity(400), move |vec, dir| {
-        let mut apps = vec.clone();
-        apps.extend(search(dir.replace("~", &home), name));
-        apps
-    })
-}
-
-impl ToApp for DirEntry {
-    fn to_app(&self) -> App {
-        let path = "~".to_string()
-            + self
-                .path()
-                .to_str()
-                .unwrap_or("")
-                .to_string()
-                .strip_prefix(&std::env::var("HOME").unwrap_or("".to_string()))
-                .unwrap_or("");
-        App {
-            ranking: 0,
-            open_command: AppCommand::Function(Function::OpenApp(path.clone())),
-            desc: path,
-            icons: None,
-            display_name: self.file_name().to_str().unwrap_or("").to_string(),
-            search_name: "".to_string(),
-        }
+/// Convert an absolute file path into an App for display in file search results.
+///
+/// Returns None for dotfiles or paths that cannot be parsed.
+pub fn path_to_app(absolute_path: &str, home_dir: &str) -> Option<App> {
+    assert!(!home_dir.is_empty(), "Home directory must not be empty.");
+    let path = absolute_path.trim();
+    if path.is_empty() {
+        return None;
     }
+
+    let filename = std::path::Path::new(path).file_name()?.to_str()?;
+    if filename.starts_with('.') {
+        return None;
+    }
+
+    let display_path = if let Some(suffix) = path.strip_prefix(home_dir) {
+        format!("~{suffix}")
+    } else {
+        path.to_string()
+    };
+
+    Some(App {
+        ranking: 0,
+        open_command: AppCommand::Function(Function::OpenApp(path.to_string())),
+        desc: display_path,
+        icons: None,
+        display_name: filename.to_string(),
+        search_name: filename.to_lowercase(),
+    })
 }
