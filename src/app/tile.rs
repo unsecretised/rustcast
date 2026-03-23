@@ -1,6 +1,5 @@
 //! This module handles the logic for the tile, AKA rustcast's main window
 pub mod elm;
-mod recent_actions;
 pub mod update;
 
 use crate::app::apps::App;
@@ -27,6 +26,7 @@ use log::{info, warn};
 use objc2::rc::Retained;
 use objc2_app_kit::NSRunningApplication;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
+use rayon::slice::ParallelSliceMut;
 use tokio::io::AsyncBufReadExt;
 use tray_icon::TrayIcon;
 
@@ -34,8 +34,6 @@ use std::collections::HashMap;
 use std::fmt::Debug;
 use std::str::FromStr;
 use std::time::Duration;
-
-use self::recent_actions::RecentActions;
 
 /// This is a wrapper around the sender to disable dropping
 #[derive(Clone, Debug)]
@@ -73,12 +71,22 @@ impl AppIndex {
         app.ranking += 1;
     }
 
-    fn contains_key(&self, name: &str) -> bool {
-        self.by_name.contains_key(name)
-    }
+    fn top_ranked(&self, limit: usize) -> Vec<App> {
+        let mut ranked: Vec<App> = self
+            .by_name
+            .values()
+            .filter(|app| app.ranking > 0)
+            .cloned()
+            .collect();
 
-    fn get(&self, name: &str) -> Option<&App> {
-        self.by_name.get(name)
+        ranked.par_sort_by(|left, right| {
+            right
+                .ranking
+                .cmp(&left.ranking)
+                .then_with(|| left.display_name.cmp(&right.display_name))
+        });
+        ranked.truncate(limit);
+        ranked
     }
 
     fn empty() -> AppIndex {
@@ -134,7 +142,6 @@ pub struct Tile {
     frontmost: Option<Retained<NSRunningApplication>>,
     pub config: Config,
     hotkeys: Hotkeys,
-    recent_actions: RecentActions,
     clipboard_content: Vec<ClipBoardContentType>,
     tray_icon: Option<TrayIcon>,
     sender: Option<ExtSender>,
@@ -271,47 +278,8 @@ impl Tile {
         self.results = results;
     }
 
-    pub fn recent_results(&self) -> Vec<App> {
-        if !self.config.remember_recent_actions {
-            return Vec::new();
-        }
-
-        self.recent_actions.resolve(|key| self.options.get(key))
-    }
-
-    pub fn record_recent_action(&mut self, key: &str) {
-        if !self.config.remember_recent_actions {
-            return;
-        }
-
-        self.recent_actions.record(key);
-    }
-
-    pub fn action_exists(&self, key: &str) -> bool {
-        self.options.contains_key(key)
-    }
-
-    pub fn refresh_recent_actions(&mut self) {
-        if !self.config.remember_recent_actions {
-            self.recent_actions.clear_and_delete_async();
-            return;
-        }
-
-        let mut changed = self
-            .recent_actions
-            .set_limit(self.config.recent_actions_limit);
-        changed = self
-            .recent_actions
-            .prune_by(|key| self.options.contains_key(key))
-            || changed;
-
-        if changed {
-            self.recent_actions.persist_async();
-        }
-    }
-
-    pub fn clear_recent_actions(&mut self) {
-        self.recent_actions.clear_and_delete_async();
+    pub fn frequent_results(&self) -> Vec<App> {
+        self.options.top_ranked(5)
     }
 
     /// Gets the frontmost application to focus later.

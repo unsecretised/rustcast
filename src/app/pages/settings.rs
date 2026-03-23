@@ -106,30 +106,6 @@ pub fn settings_page(config: Config) -> Element<'static, Message> {
     ]);
 
     let theme_clone = theme.clone();
-    let remember_recent_actions = settings_item_row([
-        settings_hint_text(theme.clone(), "Remember recent actions"),
-        checkbox(config.clone().remember_recent_actions)
-            .style(move |_, _| settings_checkbox_style(&theme_clone))
-            .on_toggle(|input| Message::SetConfig(SetConfigFields::RememberRecentActions(input)))
-            .into(),
-    ]);
-
-    let clear_recent_actions_theme = theme.clone();
-    let clear_recent_actions = settings_item_row([
-        settings_hint_text(theme.clone(), "Clear recent actions"),
-        Button::new(
-            Text::new("Clear")
-                .align_x(Alignment::Center)
-                .width(Length::Fill)
-                .font(theme.font()),
-        )
-        .style(move |_, _| settings_save_button_style(&clear_recent_actions_theme))
-        .on_press(Message::ClearRecentActions)
-        .width(140)
-        .into(),
-    ]);
-
-    let theme_clone = theme.clone();
     let clear_on_hide = settings_item_row([
         settings_hint_text(theme.clone(), "Clear on hide"),
         checkbox(config.clone().buffer_rules.clear_on_hide)
@@ -310,8 +286,6 @@ pub fn settings_page(config: Config) -> Element<'static, Message> {
             debounce.into(),
             haptic.into(),
             tray_icon.into(),
-            remember_recent_actions.into(),
-            clear_recent_actions.into(),
             clear_on_hide.into(),
             clear_on_enter.into(),
             show_icons.into(),
