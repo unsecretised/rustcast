@@ -644,7 +644,6 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
                     final_config = Config::default();
                     final_config.shells = tile.config.shells.clone();
                     final_config.search_dirs = tile.config.search_dirs.clone();
-                    final_config.modes = tile.config.modes.clone();
                 }
             };
 
