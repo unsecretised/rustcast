@@ -48,6 +48,7 @@ pub fn clipboard_view(
         .align_y(Alignment::Center)
         .into();
     }
+
     let viewport_content: Element<'static, Message> =
         match clipboard_content.get(focussed_id as usize) {
             Some(content) => viewport_content(content, &theme),
@@ -129,14 +130,23 @@ fn viewport_content(content: &ClipBoardContentType, theme: &Theme) -> Element<'s
     };
 
     let theme_clone = theme.clone();
+    let theme_clone_2 = theme.clone();
     Column::from_iter([
         viewer,
         container(
-            Button::new("Delete")
-                .on_press(Message::EditClipboardHistory(Editable::Delete(
-                    content.to_owned(),
-                )))
-                .style(move |_, _| delete_button_style(&theme_clone)),
+            Row::from_iter([
+                Button::new("Delete")
+                    .on_press(Message::EditClipboardHistory(Editable::Delete(
+                        content.to_owned(),
+                    )))
+                    .style(move |_, _| delete_button_style(&theme_clone))
+                    .into(),
+                Button::new("Clear")
+                    .on_press(Message::ClearClipboardHistory)
+                    .style(move |_, _| delete_button_style(&theme_clone_2))
+                    .into(),
+            ])
+            .spacing(10),
         )
         .width(Length::Fill)
         .align_x(Alignment::Center)

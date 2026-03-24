@@ -628,6 +628,11 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
             ])
         }
 
+        Message::ClearClipboardHistory => {
+            tile.clipboard_content.clear();
+            Task::none()
+        }
+
         Message::DebouncedSearch(id) => {
             // Only execute if this is still the most recent debounce timer
             if !tile.debouncer.is_ready() {

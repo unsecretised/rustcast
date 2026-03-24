@@ -103,6 +103,7 @@ pub enum Message {
     SetSender(ExtSender),
     SwitchToPage(Page),
     EditClipboardHistory(Editable<ClipBoardContentType>),
+    ClearClipboardHistory,
     ChangeFocus(ArrowKey, u32),
     FileSearchResult(Vec<App>),
     FileSearchClear,
