@@ -112,6 +112,7 @@ pub enum Message {
 }
 
 #[derive(Debug, Clone)]
+#[allow(unused)]
 pub enum SetConfigFields {
     ToDefault,
     ToggleHotkey(String),

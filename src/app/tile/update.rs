@@ -66,7 +66,7 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
             } else {
                 info!("Switching to default mode");
                 tile.current_mode = "default".to_string();
-                window::latest().map(|x| Message::HideWindow(x.unwrap()))
+                Task::none()
             }
         }
 
@@ -557,9 +557,12 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
             .pick_file()
             .and_then(|x| {
                 x.to_str().map(|x| {
-                    Task::done(Message::SetConfig(SetConfigFields::Modes(
-                        Editable::Create((mode_name, x.to_string())),
-                    )))
+                    Task::batch([
+                        Task::done(Message::SetConfig(SetConfigFields::Modes(
+                            Editable::Create((mode_name, x.to_string())),
+                        ))),
+                        Task::done(Message::WriteConfig(false)),
+                    ])
                 })
             })
             .unwrap_or(Task::none()),
@@ -570,9 +573,7 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
                 SetConfigFields::ToggleHotkey(hk) => final_config.toggle_hotkey = hk,
                 SetConfigFields::ClipboardHotkey(hk) => final_config.toggle_hotkey = hk,
                 SetConfigFields::Modes(Editable::Create((key, value))) => {
-                    if !final_config.modes.contains_key(&key) {
-                        final_config.modes.insert(key, value);
-                    }
+                    final_config.modes.entry(key).or_insert(value);
                 }
                 SetConfigFields::Modes(Editable::Delete((key, _))) => {
                     final_config.modes.remove(&key);
@@ -582,9 +583,7 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
                     final_config.modes.insert(new.0, new.1);
                 }
                 SetConfigFields::Aliases(Editable::Create((key, value))) => {
-                    if !final_config.aliases.contains_key(&key) {
-                        final_config.aliases.insert(key, value);
-                    }
+                    final_config.aliases.entry(key).or_insert(value);
                 }
                 SetConfigFields::Aliases(Editable::Delete((key, _))) => {
                     final_config.aliases.remove(&key);
