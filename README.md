@@ -27,6 +27,8 @@
   </a>
 </p>
 
+> [Those who sponsor me also get a personal easter egg inside RustCast](https://github.com/sponsors/unsecretised)
+
 **Config docs:** https://github.com/unsecretised/rustcast/wiki
 
 **Community:** https://discord.gg/bDfNYPbnC5
@@ -35,8 +37,9 @@
 [RustCast Library for shell scripts](https://github.com/unsecretised/rustcast-library)
 
 > For support use github discussions / issues / the discord
-> 
-> You can also contact unsecretised / secretised at [admin@rustcast.app](mailto:admin+gh@rustcast.app)
+>
+> You can also contact unsecretised / secretised at
+> [admin@rustcast.app](mailto:admin+gh@rustcast.app)
 
 ![RustCast Demo](./docs/rustcast-latest-demo.png)
 
@@ -123,11 +126,12 @@ configure [The list](docs/config.toml).
   and has been using RustCast since almost the first version!
 - [Hriztam](https://github.com/hriztam) - Added support for unit conversions to
   rustcast
+- [Lars-Schumann](https://github.com/Lars-Schumann) - Sponsored me
+- [Tanishq Dubey](https://github.com/tanishq-dubey) - Contributor, improved the
+  file search to use `mdfind`
+- [JON](https://github.com/jiasunzhu613) - Contributor,
 
-All the people who starred my repo!!
-
-Those who sponsor me also get a free easter egg inside RustCast, so if you want
-a free easter egg, a dollar is all you need!
+And ofc, all the people who starred my repo!!
 
 And the updated list of contributors to the macos version:
 
@@ -139,6 +143,8 @@ And the updated list of contributors to the macos version:
 
 - Nazeofel (Random Variable on discord) -> led to the _randomvar_ easter egg
 - Lemon -> led to the _lemon_ easter egg that shows "lemon" on rustcast
+- Lars-Schumann -> search _f_ and get ferris.rs as a result
+- Me -> 67
 
 ## If you like rustcast, consider starring it on github :)
 
