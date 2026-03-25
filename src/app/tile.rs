@@ -382,7 +382,7 @@ async fn read_mdfind_results(
     home_dir: &str,
     receiver: &mut tokio::sync::watch::Receiver<(String, Vec<String>)>,
     output: &mut iced::futures::channel::mpsc::Sender<Message>,
-) {
+) -> bool {
     use crate::app::{FILE_SEARCH_BATCH_SIZE, FILE_SEARCH_MAX_RESULTS};
 
     let mut reader = tokio::io::BufReader::new(stdout);
@@ -395,7 +395,7 @@ async fn read_mdfind_results(
             result = reader.read_line(&mut line) => result,
             _ = receiver.changed() => {
                 // New query arrived — caller will handle it.
-                break;
+                return true;
             }
         };
 
@@ -408,7 +408,7 @@ async fn read_mdfind_results(
                         .await
                         .ok();
                 }
-                break;
+                return false;
             }
             Ok(_) => {
                 if let Some(app) = crate::commands::path_to_app(line.trim(), home_dir) {
@@ -428,10 +428,10 @@ async fn read_mdfind_results(
                             .await
                             .ok();
                     }
-                    break;
+                    return false;
                 }
             }
-            Err(_) => break,
+            Err(_) => return false,
         }
     }
 }
@@ -491,23 +491,15 @@ fn handle_file_search() -> impl futures::Stream<Item = Message> {
         let home_dir = std::env::var("HOME").unwrap_or_else(|_| "/".to_string());
         assert!(!home_dir.is_empty(), "HOME must not be empty.");
 
-    let run_loop = NSRunLoop::currentRunLoop();
-    let run_loop_mode = unsafe { NSDefaultRunLoopMode };
-    let tick_seconds: f64 = 0.05;
-    let idle_sleep = Duration::from_millis((tick_seconds * 1000.0) as u64);
+        let mut child: Option<tokio::process::Child> = None;
+        let mut wait_for_change = true;
 
-    loop {
-        // Tick the run loop to process notifications.
-        let timeout = NSDate::dateWithTimeIntervalSinceNow(tick_seconds);
-        let handled_source = run_loop.runMode_beforeDate(run_loop_mode, &timeout);
-
-        // Drain results only when the finish-gathering notification has fired.
-        if results_ready.swap(false, Ordering::AcqRel) {
-            if query.resultCount() > 0 {
-                let paths = drain_metadata_results(&query, &home_dir, &msg_tx);
-                load_file_search_icons(&paths, &msg_tx, &watch_rx);
+        loop {
+            if wait_for_change && receiver.changed().await.is_err() {
+                break;
             }
-            receiver.borrow_and_update();
+
+            wait_for_change = true;
 
             // Kill previous mdfind if still running.
             if let Some(ref mut proc) = child {
@@ -516,7 +508,7 @@ fn handle_file_search() -> impl futures::Stream<Item = Message> {
             }
             child = None;
 
-            let (query, dirs) = receiver.borrow().clone();
+            let (query, dirs) = receiver.borrow_and_update().clone();
             assert!(query.len() < 1024, "Query too long.");
 
             if query.len() < 2 {
@@ -535,18 +527,51 @@ fn handle_file_search() -> impl futures::Stream<Item = Message> {
                 args.push(expanded);
             }
 
-        if msg_tx.is_closed() {
-            break;
+            let mut command = tokio::process::Command::new("mdfind");
+            command.args(&args);
+            command.stdout(std::process::Stdio::piped());
+            command.stderr(std::process::Stdio::null());
+
+            let mut spawned = match command.spawn() {
+                Ok(child) => child,
+                Err(error) => {
+                    warn!("Failed to spawn mdfind: {error}");
+                    continue;
+                }
+            };
+
+            let stdout = match spawned.stdout.take() {
+                Some(stdout) => stdout,
+                None => {
+                    warn!("mdfind stdout was not captured");
+                    spawned.kill().await.ok();
+                    spawned.wait().await.ok();
+                    continue;
+                }
+            };
+
+            child = Some(spawned);
+
+            let canceled = read_mdfind_results(stdout, &home_dir, &mut receiver, &mut output).await;
+
+            if let Some(ref mut proc) = child {
+                if canceled {
+                    proc.kill().await.ok();
+                }
+                proc.wait().await.ok();
+            }
+            child = None;
+
+            // `read_mdfind_results` consumed the watch notification when canceled,
+            // so process the latest query immediately.
+            if canceled {
+                wait_for_change = false;
+            }
         }
 
-        // NSRunLoop can return immediately when no input sources/timers are active.
-        // Without this guard, the thread can busy-spin and consume a full core.
-        if !handled_source {
-            std::thread::sleep(idle_sleep);
-        }
-    }
-
-            read_mdfind_results(stdout, &home_dir, &mut receiver, &mut output).await;
+        if let Some(ref mut proc) = child {
+            proc.kill().await.ok();
+            proc.wait().await.ok();
         }
     })
 }
