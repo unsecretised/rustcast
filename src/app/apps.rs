@@ -175,7 +175,7 @@ impl App {
                 Text::new(self.display_name)
                     .font(theme.font())
                     .size(16)
-                    .wrapping(Wrapping::WordOrGlyph)
+                    .wrapping(Wrapping::None)
                     .color(theme.text_color(1.0)),
             )
             .push(
