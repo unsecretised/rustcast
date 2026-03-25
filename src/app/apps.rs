@@ -110,6 +110,14 @@ impl App {
             },
             App {
                 ranking: 0,
+                open_command: AppCommand::Function(Function::QuitAllApps),
+                desc: RUSTCAST_DESC_NAME.to_string(),
+                icons: icons.clone(),
+                display_name: "Quit All Apps".to_string(),
+                search_name: "quit all apps".to_string(),
+            },
+            App {
+                ranking: 0,
                 open_command: AppCommand::Message(Message::SwitchToPage(Page::Settings)),
                 desc: RUSTCAST_DESC_NAME.to_string(),
                 icons: icons.clone(),

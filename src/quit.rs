@@ -65,3 +65,12 @@ pub fn terminate_app(name: String) {
         }
     }
 }
+
+pub fn terminate_all_apps() {
+    let open_apps = NSWorkspace::sharedWorkspace().runningApplications();
+    for app in open_apps {
+        if app.activationPolicy() == NSApplicationActivationPolicy::Regular {
+            app.terminate();
+        }
+    }
+}
