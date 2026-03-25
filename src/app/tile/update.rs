@@ -230,42 +230,6 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
 
         Message::OpenFocused => Task::done(Message::OpenResult(tile.focus_id)),
         Message::OpenResult(id) => open_result(tile, id as usize),
-        Message::OpenFocused => {
-            info!("Open Focussed called");
-            let results = if tile.page == Page::ClipboardHistory {
-                tile.clipboard_content
-                    .iter()
-                    .map(|x| x.to_app().to_owned())
-                    .collect()
-            } else {
-                tile.results.clone()
-            };
-            match results.get(tile.focus_id as usize) {
-                Some(App {
-                    search_name: name,
-                    open_command: AppCommand::Function(func),
-                    ..
-                }) => {
-                    info!("Updating ranking for: {name}");
-                    tile.options.update_ranking(name);
-                    Task::done(Message::RunFunction(func.to_owned()))
-                }
-                Some(App {
-                    search_name: name,
-                    open_command: AppCommand::Message(msg),
-                    ..
-                }) => {
-                    info!("Updating ranking for: {name}");
-                    tile.options.update_ranking(name);
-                    Task::done(msg.to_owned())
-                }
-                Some(App {
-                    open_command: AppCommand::Display,
-                    ..
-                }) => Task::done(Message::ReturnFocus),
-                None => Task::none(),
-            }
-        }
 
         Message::ReloadConfig => {
             info!("Reloading config");
@@ -758,7 +722,16 @@ fn resize_for_results_count(id: Id, count: usize) -> Task<Message> {
 }
 
 fn open_result(tile: &mut Tile, id: usize) -> Task<Message> {
-    let Some(app) = tile.results.get(id).cloned() else {
+    let results = if tile.page == Page::ClipboardHistory {
+        tile.clipboard_content
+            .iter()
+            .map(|x| x.to_app().to_owned())
+            .collect()
+    } else {
+        tile.results.clone()
+    };
+
+    let Some(app) = results.get(id).cloned() else {
         return Task::none();
     };
 
