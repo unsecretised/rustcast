@@ -33,6 +33,7 @@ use crate::calculator::Expr;
 use crate::commands::Function;
 use crate::config::Config;
 use crate::debounce::DebouncePolicy;
+use crate::quit::get_open_apps;
 use crate::unit_conversion;
 use crate::utils::is_valid_url;
 use crate::{app::ArrowKey, platform::focus_this_app};
@@ -716,12 +717,19 @@ fn open_window(height: f32) -> Task<Message> {
 
 /// A helper function for resizing rustcast when only one result is found
 fn single_item_resize_task(id: Id) -> Task<Message> {
-    Task::done(Message::ResizeWindow(id, 55. + DEFAULT_WINDOW_HEIGHT))
+    resize_task(id, 1)
 }
 
 /// A helper function for resizing rustcast when zero results are found
 fn zero_item_resize_task(id: Id) -> Task<Message> {
-    Task::done(Message::ResizeWindow(id, DEFAULT_WINDOW_HEIGHT))
+    resize_task(id, 0)
+}
+
+fn resize_task(id: Id, count: u32) -> Task<Message> {
+    Task::done(Message::ResizeWindow(
+        id,
+        (55 * count) as f32 + DEFAULT_WINDOW_HEIGHT,
+    ))
 }
 
 /// Handling the lemon easter egg icon
@@ -831,6 +839,10 @@ fn execute_query(tile: &mut Tile, id: Id) -> Task<Message> {
     }
 
     tile.handle_search_query_changed();
+    if tile.query_lc.starts_with("quit") {
+        tile.results
+            .extend(get_open_apps(tile.config.theme.show_icons));
+    }
 
     if !tile.results.is_empty() {
         tile.results.par_sort_by_key(|x| -x.ranking);

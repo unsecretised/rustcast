@@ -4,9 +4,9 @@ use iced::wgpu::rwh::WindowHandle;
 pub use self::cross::default_app_paths;
 use crate::app::apps::App;
 
-mod cross;
+pub mod cross;
 #[cfg(target_os = "macos")]
-mod macos;
+pub mod macos;
 
 pub fn set_activation_policy_accessory() {
     #[cfg(target_os = "macos")]

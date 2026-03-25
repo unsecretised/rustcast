@@ -7,6 +7,7 @@ mod commands;
 mod config;
 mod debounce;
 mod platform;
+mod quit;
 mod styles;
 mod unit_conversion;
 mod utils;
