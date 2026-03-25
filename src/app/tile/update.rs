@@ -382,6 +382,9 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
         }
 
         Message::HideWindow(a) => {
+            if tile.page == Page::Settings {
+                return Task::none();
+            }
             info!("Hiding RustCast window");
             tile.visible = false;
             tile.focused = false;
@@ -555,11 +558,11 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
                 std::env::var("HOME").unwrap_or("".to_string()) + "/.config/rustcast/config.toml",
             )
             .pick_file()
-            .and_then(|x| {
-                x.to_str().map(|x| {
+            .and_then(|path| {
+                path.to_str().map(|path_str| {
                     Task::batch([
                         Task::done(Message::SetConfig(SetConfigFields::Modes(
-                            Editable::Create((mode_name, x.to_string())),
+                            Editable::Create((mode_name, path_str.to_string())),
                         ))),
                         Task::done(Message::WriteConfig(false)),
                     ])
@@ -573,7 +576,7 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
                 SetConfigFields::ToggleHotkey(hk) => final_config.toggle_hotkey = hk,
                 SetConfigFields::ClipboardHotkey(hk) => final_config.toggle_hotkey = hk,
                 SetConfigFields::Modes(Editable::Create((key, value))) => {
-                    final_config.modes.entry(key).or_insert(value);
+                    final_config.modes.insert(key, value);
                 }
                 SetConfigFields::Modes(Editable::Delete((key, _))) => {
                     final_config.modes.remove(&key);
@@ -654,6 +657,9 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
         Message::WriteConfig(page_switch) => {
             let config_file_path =
                 std::env::var("HOME").unwrap_or("".to_string()) + "/.config/rustcast/config.toml";
+
+            tile.config.aliases.remove("");
+            tile.config.modes.remove("");
 
             let config_string = match toml::to_string_pretty(&tile.config) {
                 Ok(a) => a,

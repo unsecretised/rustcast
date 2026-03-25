@@ -359,7 +359,7 @@ pub fn settings_page(config: Config) -> Element<'static, Message> {
         bg_clr.into(),
         settings_hint_text(theme.clone(), "Aliases"),
         aliases_item(config.aliases, &theme),
-        settings_hint_text(theme.clone(), "Rustcast modes"),
+        settings_hint_text(theme.clone(), "Modes"),
         modes_item(config.modes, &theme),
         Row::from_iter([
             savebutton(theme.clone()),
@@ -553,7 +553,7 @@ fn modes_item(modes: HashMap<String, String>, theme: &Theme) -> Element<'static,
                 let val_clone = value.clone();
                 let theme_clone_2 = theme.clone();
                 Row::from_iter([
-                    text_input_cell(key.to_owned(), &theme_clone, "Shorthand")
+                    text_input_cell(key.to_owned(), &theme_clone, "Mode name")
                         .on_input(move |input| {
                             Message::SetConfig(SetConfigFields::Modes(Editable::Update {
                                 old: (key_clone.clone(), val_clone.clone()),
