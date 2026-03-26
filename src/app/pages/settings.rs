@@ -432,7 +432,7 @@ fn wiki_button(theme: Theme) -> Element<'static, Message> {
     .width(Length::Fill)
     .on_press(Message::RunFunction(
         crate::commands::Function::OpenWebsite(
-            "https://github.com/unsecretised/rustcast/wiki".to_string(),
+            "https://github.com/RustCastLabs/rustcast/wiki".to_string(),
         ),
     ))
     .into()

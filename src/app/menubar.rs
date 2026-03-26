@@ -104,7 +104,7 @@ fn init_event_handler(sender: ExtSender, hotkey_id: Option<u32>) {
                     .spawn(async move { sender.clone().try_send(Message::HideTrayIcon).unwrap() });
             }
             "open_issue_page" => {
-                open_url("https://github.com/unsecretised/rustcast/issues/new");
+                open_url("https://github.com/RustCastLabs/rustcast/issues/new");
             }
             "show_rustcast" => {
                 if let Some(hk) = hotkey_id {
@@ -114,13 +114,13 @@ fn init_event_handler(sender: ExtSender, hotkey_id: Option<u32>) {
                 }
             }
             "update" => {
-                open_url("https://github.com/unsecretised/rustcast/releases/latest");
+                open_url("https://github.com/RustCastLabs/rustcast/releases/latest");
             }
             "open_discord" => {
                 open_url(DISCORD_LINK);
             }
             "open_help_page" => {
-                open_url("https://github.com/unsecretised/rustcast/discussions/new?category=q-a");
+                open_url("https://github.com/RustCastLabs/rustcast/discussions/new?category=q-a");
             }
             "open_preferences" => {
                 runtime.spawn(async move {
@@ -128,7 +128,7 @@ fn init_event_handler(sender: ExtSender, hotkey_id: Option<u32>) {
                 });
             }
             "open_github_page" => {
-                open_url("https://github.com/unsecretised/rustcast");
+                open_url("https://github.com/RustCastLabs/rustcast");
             }
             id => {
                 if id.starts_with("mode_switch_") {
