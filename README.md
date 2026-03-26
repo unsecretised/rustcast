@@ -10,35 +10,35 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/unsecretised/rustcast/releases/latest">
-    <img alt="Latest release" src="https://img.shields.io/github/v/release/unsecretised/rustcast?display_name=tag&sort=semver&style=flat-square" />
+  <a href="https://github.com/RustCastLabs/rustcast/releases/latest">
+    <img alt="Latest release" src="https://img.shields.io/github/v/release/RustCastLabs/rustcast?display_name=tag&sort=semver&style=flat-square" />
   </a>
-  <a href="https://github.com/unsecretised/rustcast/releases">
-    <img alt="Downloads" src="https://img.shields.io/github/downloads/unsecretised/rustcast/total?style=flat-square" />
+  <a href="https://github.com/RustCastLabs/rustcast/releases">
+    <img alt="Downloads" src="https://img.shields.io/github/downloads/RustCastLabs/rustcast/total?style=flat-square" />
   </a>
   <a href="https://discord.gg/bDfNYPbnC5">
     <img alt="Discord" src="https://img.shields.io/discord/1463119282459119844?label=Discord&logo=discord&logoColor=white&style=flat-square" />
   </a>
-  <a href="https://github.com/unsecretised/rustcast/stargazers">
-    <img alt="Stars" src="https://img.shields.io/github/stars/unsecretised/rustcast?style=flat-square" />
+  <a href="https://github.com/RustCastLabs/rustcast/stargazers">
+    <img alt="Stars" src="https://img.shields.io/github/stars/RustCastLabs/rustcast?style=flat-square" />
   </a>
-  <a href="https://github.com/unsecretised/rustcast/blob/main/LICENSE">
-    <img alt="License" src="https://img.shields.io/github/license/unsecretised/rustcast?style=flat-square" />
+  <a href="https://github.com/RustCastLabs/rustcast/blob/main/LICENSE">
+    <img alt="License" src="https://img.shields.io/github/license/RustCastLabs/rustcast?style=flat-square" />
   </a>
 </p>
 
-> [Those who sponsor me also get a personal easter egg inside RustCast](https://github.com/sponsors/unsecretised)
+> [Those who sponsor me also get a personal easter egg inside RustCast](https://github.com/sponsors/RustCastLabs)
 
-**Config docs:** https://github.com/unsecretised/rustcast/wiki
+**Config docs:** https://github.com/RustCastLabs/rustcast/wiki
 
 **Community:** https://discord.gg/bDfNYPbnC5
 
 **Plugins**:
-[RustCast Library for shell scripts](https://github.com/unsecretised/rustcast-library)
+[RustCast Library for shell scripts](https://github.com/RustCastLabs/rustcast-library)
 
 > For support use github discussions / issues / the discord
 >
-> You can also contact unsecretised / secretised at
+> You can also contact RustCastLabs / secretised at
 > [admin@rustcast.app](mailto:admin+gh@rustcast.app)
 
 ![RustCast Demo](./docs/rustcast-latest-demo.png)
@@ -48,18 +48,18 @@
 ### Via Homebrew:
 
 ```
-brew install --cask unsecretised/tap/rustcast
+brew install --cask RustCastLabs/tap/rustcast
 ```
 
 ### Via github releases
 
 1. Download the dmg from this link
-   [https://github.com/unsecretised/rustcast/releases/latest/download/rustcast.dmg](https://github.com/unsecretised/rustcast/releases/latest/download/rustcast.dmg)
+   [https://github.com/RustCastLabs/rustcast/releases/latest/download/rustcast.dmg](https://github.com/RustCastLabs/rustcast/releases/latest/download/rustcast.dmg)
 
 ## Config:
 
 Full config docs can be found
-[here](https://github.com/unsecretised/rustcast/wiki)
+[here](https://github.com/RustCastLabs/rustcast/wiki)
 
 The config file should be located at: `~/.config/rustcast/config.toml` RustCast
 creates the default configuration for you, but it does use its
@@ -135,8 +135,8 @@ And ofc, all the people who starred my repo!!
 
 And the updated list of contributors to the macos version:
 
-<a href="https://github.com/unsecretised/rustcast/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=unsecretised/rustcast" />
+<a href="https://github.com/RustCastLabs/rustcast/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=RustCastLabs/rustcast" />
 </a>
 
 ### Easter egg list:
@@ -148,7 +148,7 @@ And the updated list of contributors to the macos version:
 
 ## If you like rustcast, consider starring it on github :)
 
-[![Star History Chart](https://api.star-history.com/svg?repos=unsecretised/rustcast&type=date&legend=top-left)](https://www.star-history.com/#unsecretised/rustcast&type=date&legend=top-left)
+[![Star History Chart](https://api.star-history.com/svg?repos=RustCastLabs/rustcast&type=date&legend=top-left)](https://www.star-history.com/#RustCastLabs/rustcast&type=date&legend=top-left)
 
 ## Motivations:
 

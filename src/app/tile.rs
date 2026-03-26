@@ -612,7 +612,7 @@ fn handle_version_and_rankings() -> impl futures::Stream<Item = Message> {
 
         let req = minreq::Request::new(
             minreq::Method::Get,
-            "https://api.github.com/repos/unsecretised/rustcast/releases/latest",
+            "https://api.github.com/repos/RustCastLabs/rustcast/releases/latest",
         )
         .with_header("User-Agent", "rustcast-update-checker")
         .with_header("Accept", "application/vnd.github+json")
