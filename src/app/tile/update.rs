@@ -261,6 +261,13 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
                 Err(_) => return Task::none(),
             };
 
+            let update_apps_task = if tile.config.shells != new_config.shells {
+                info!("App Update required");
+                Task::done(Message::UpdateApps)
+            } else {
+                Task::none()
+            };
+
             if let Some(icon) = tile.tray_icon.as_mut() {
                 icon.set_visible(new_config.clone().show_trayicon)
                     .unwrap_or(());
@@ -280,7 +287,7 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
 
             tile.theme = new_config.theme.to_owned().into();
             tile.config = new_config;
-            Task::done(Message::LoadRanking)
+            Task::batch([Task::done(Message::LoadRanking), update_apps_task])
         }
 
         Message::KeyPressed(hk_id) => {
@@ -630,6 +637,41 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
                         })
                         .collect();
                 }
+
+                SetConfigFields::ShellCommands(Editable::Create(shell_command)) => {
+                    if !final_config.shells.contains(&shell_command) {
+                        final_config.shells.push(shell_command);
+                    }
+                }
+
+                SetConfigFields::ShellCommands(Editable::Delete(shell_command)) => {
+                    final_config.shells = final_config
+                        .shells
+                        .iter()
+                        .filter_map(|shell| {
+                            if &shell_command != shell {
+                                Some(shell.to_owned())
+                            } else {
+                                None
+                            }
+                        })
+                        .collect();
+                }
+
+                SetConfigFields::ShellCommands(Editable::Update { old, new }) => {
+                    final_config.shells = final_config
+                        .shells
+                        .iter()
+                        .map(|shell| {
+                            if shell == &old {
+                                new.clone()
+                            } else {
+                                shell.to_owned()
+                            }
+                        })
+                        .collect();
+                }
+
                 SetConfigFields::SearchUrl(url) => final_config.search_url = url,
                 SetConfigFields::PlaceHolder(placeholder) => final_config.placeholder = placeholder,
                 SetConfigFields::AutoSuggest(status) => final_config.auto_suggest = status,

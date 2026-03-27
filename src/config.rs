@@ -178,12 +178,12 @@ impl Default for Buffer {
 /// Command is the command it will run when the button is clicked
 /// Icon_path is the path to an icon, but this is optional
 /// Alias is the text that is used to call this command / search for it
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Default)]
 pub struct Shelly {
-    command: String,
-    icon_path: Option<String>,
-    alias: String,
-    alias_lc: String,
+    pub command: String,
+    pub icon_path: Option<String>,
+    pub alias: String,
+    pub alias_lc: String,
 }
 
 impl ToApp for Shelly {
