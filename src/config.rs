@@ -20,6 +20,7 @@ pub struct Config {
     pub toggle_hotkey: String,
     pub clipboard_hotkey: String,
     pub buffer_rules: Buffer,
+    pub main_page: MainPage,
     pub theme: Theme,
     pub placeholder: String,
     pub search_url: String,
@@ -29,7 +30,6 @@ pub struct Config {
     pub modes: HashMap<String, String>,
     pub aliases: HashMap<String, String>,
     pub search_dirs: Vec<String>,
-    pub auto_suggest: bool,
     pub log_path: String,
     pub debounce_delay: u64,
 }
@@ -46,7 +46,7 @@ impl Default for Config {
             search_url: "https://duckduckgo.com/search?q=%s".to_string(),
             haptic_feedback: false,
             show_trayicon: true,
-            auto_suggest: true,
+            main_page: MainPage::default(),
             search_dirs: vec!["~".to_string()],
             log_path: "/tmp/rustcast.log".to_string(),
             modes: HashMap::new(),
@@ -55,6 +55,15 @@ impl Default for Config {
             debounce_delay: 300,
         }
     }
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Default, Eq, Copy)]
+#[serde(rename_all = "lowercase")]
+pub enum MainPage {
+    Favourites,
+    FrequentlyUsed,
+    #[default]
+    Blank,
 }
 
 /// The settings you can set for the theme

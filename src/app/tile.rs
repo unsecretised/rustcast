@@ -109,6 +109,19 @@ impl AppIndex {
         ranked
     }
 
+    fn get_favourites(&self) -> Vec<App> {
+        self.by_name
+            .values()
+            .filter_map(|x| {
+                if x.ranking == -1 {
+                    Some(x.to_owned())
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
+
     fn empty() -> AppIndex {
         AppIndex {
             by_name: HashMap::new(),

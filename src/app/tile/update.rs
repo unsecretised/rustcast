@@ -32,6 +32,7 @@ use crate::app::{Message, Page, tile::Tile};
 use crate::calculator::Expr;
 use crate::commands::Function;
 use crate::config::Config;
+use crate::config::MainPage;
 use crate::debounce::DebouncePolicy;
 use crate::quit::get_open_apps;
 use crate::unit_conversion;
@@ -50,7 +51,7 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
             tile.focused = true;
             tile.visible = true;
 
-            if tile.page == Page::Main && tile.query_lc.is_empty() && tile.config.auto_suggest {
+            if tile.page == Page::Main && tile.query_lc.is_empty() {
                 window::latest()
                     .map(|x| x.unwrap())
                     .map(|id| Message::SearchQueryChanged(String::new(), id))
@@ -420,6 +421,21 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
             ])
         }
 
+        Message::ToggleFavouriteApp(app_name) => {
+            let ranking = match tile.options.by_name.get(&app_name) {
+                None => return Task::none(),
+                Some(app) => {
+                    if app.ranking == -1 {
+                        0
+                    } else {
+                        -1
+                    }
+                }
+            };
+            tile.options.set_ranking(&app_name, ranking);
+            Task::none()
+        }
+
         Message::UpdateApps => {
             let mut new_options = get_installed_apps(tile.config.theme.show_icons);
             new_options.extend(tile.config.shells.iter().map(|x| x.to_app()));
@@ -616,7 +632,7 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
                 }
                 SetConfigFields::SearchUrl(url) => final_config.search_url = url,
                 SetConfigFields::PlaceHolder(placeholder) => final_config.placeholder = placeholder,
-                SetConfigFields::AutoSuggest(status) => final_config.auto_suggest = status,
+                SetConfigFields::SetPage(page) => final_config.main_page = page,
                 SetConfigFields::DebounceDelay(delay) => final_config.debounce_delay = delay,
                 SetConfigFields::HapticFeedback(haptic_feedback) => {
                     final_config.haptic_feedback = haptic_feedback
@@ -800,8 +816,12 @@ fn execute_query(tile: &mut Tile, id: Id) -> Task<Message> {
         _ => {}
     }
 
-    if tile.page == Page::Main && tile.query_lc.is_empty() && tile.config.auto_suggest {
-        tile.results = tile.frequent_results();
+    if tile.page == Page::Main && tile.query_lc.is_empty() {
+        tile.results = match tile.config.main_page {
+            MainPage::FrequentlyUsed => tile.frequent_results(),
+            MainPage::Blank => vec![],
+            MainPage::Favourites => tile.options.get_favourites(),
+        };
         return resize_for_results_count(id, tile.results.len());
     }
 
