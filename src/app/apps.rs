@@ -211,6 +211,14 @@ impl App {
         }
         row = row.push(container(text_block).width(Fill));
 
+        let name = self.search_name.clone();
+        let theme_clone = theme.clone();
+        row = row.push(
+            Button::new("♥️")
+                .on_press_with(move || Message::ToggleFavouriteApp(name.clone()))
+                .style(move |_, _| result_button_style(&theme_clone)),
+        );
+
         let msg = on_press.or(match self.open_command.clone() {
             AppCommand::Function(func) => Some(Message::RunFunction(func)),
             AppCommand::Message(msg) => Some(msg),

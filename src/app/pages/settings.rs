@@ -3,16 +3,22 @@
 use std::collections::HashMap;
 
 use iced::widget::Slider;
+use iced::widget::Space;
 use iced::widget::TextInput;
 use iced::widget::checkbox;
+use iced::widget::radio;
 use iced::widget::text_input;
 
 use crate::app::Editable;
 use crate::app::SetConfigBufferFields;
 use crate::app::SetConfigThemeFields;
+use crate::commands::Function;
+use crate::config::MainPage;
+use crate::config::Shelly;
 use crate::styles::delete_button_style;
 use crate::styles::settings_add_button_style;
 use crate::styles::settings_checkbox_style;
+use crate::styles::settings_radio_button_style;
 use crate::styles::settings_save_button_style;
 use crate::styles::settings_slider_style;
 use crate::styles::settings_text_input_item_style;
@@ -127,16 +133,40 @@ pub fn settings_page(config: Config) -> Element<'static, Message> {
     ]);
 
     let theme_clone = theme.clone();
-    let auto_suggest = settings_item_row([
+    let auto_suggest = settings_item_column([
         settings_hint_text(theme.clone(), "Suggestions on open"),
-        checkbox(config.auto_suggest)
-            .style(move |_, _| settings_checkbox_style(&theme_clone))
-            .on_toggle(|input| Message::SetConfig(SetConfigFields::AutoSuggest(input)))
+        settings_item_row([
+            radio(
+                "Favourites",
+                MainPage::Favourites,
+                Some(config.main_page),
+                |page| Message::SetConfig(SetConfigFields::SetPage(page)),
+            )
+            .style({
+                let theme_clone = theme_clone.clone();
+                move |_, _| settings_radio_button_style(&theme_clone.clone())
+            })
             .into(),
-        notice_item(
-            theme.clone(),
-            "If an empty query should give you your most used actions",
-        ),
+            radio(
+                "Frequently Used",
+                MainPage::FrequentlyUsed,
+                Some(config.main_page),
+                |page| Message::SetConfig(SetConfigFields::SetPage(page)),
+            )
+            .style({
+                let theme_clone = theme_clone.clone();
+                move |_, _| settings_radio_button_style(&theme_clone.clone())
+            })
+            .into(),
+            radio("Nothing", MainPage::Blank, Some(config.main_page), |page| {
+                Message::SetConfig(SetConfigFields::SetPage(page))
+            })
+            .style(move |_, _| settings_radio_button_style(&theme_clone.clone()))
+            .into(),
+        ])
+        .spacing(30)
+        .into(),
+        notice_item(theme.clone(), "What an empty query should show"),
     ]);
 
     let theme_clone = theme.clone();
@@ -204,16 +234,19 @@ pub fn settings_page(config: Config) -> Element<'static, Message> {
     let theme_clone = theme.clone();
     let font_family = settings_item_column([
         settings_hint_text(theme.clone(), "Set Font family"),
-        text_input("Font family", &config.theme.font.unwrap_or("".to_string()))
-            .on_input(move |input: String| {
-                Message::SetConfig(SetConfigFields::SetThemeFields(SetConfigThemeFields::Font(
-                    input,
-                )))
-            })
-            .on_submit(Message::WriteConfig(false))
-            .width(Length::Fill)
-            .style(move |_, _| settings_text_input_item_style(&theme_clone))
-            .into(),
+        text_input(
+            "Font family",
+            &config.theme.font.clone().unwrap_or("".to_string()),
+        )
+        .on_input(move |input: String| {
+            Message::SetConfig(SetConfigFields::SetThemeFields(SetConfigThemeFields::Font(
+                input,
+            )))
+        })
+        .on_submit(Message::WriteConfig(false))
+        .width(Length::Fill)
+        .style(move |_, _| settings_text_input_item_style(&theme_clone))
+        .into(),
         notice_item(theme.clone(), "What font rustcast should use"),
     ]);
 
@@ -372,12 +405,18 @@ pub fn settings_page(config: Config) -> Element<'static, Message> {
         text_clr.into(),
         bg_clr.into(),
         settings_hint_text(theme.clone(), "Aliases"),
-        aliases_item(config.aliases, &theme),
+        aliases_item(config.aliases.clone(), &theme),
         settings_hint_text(theme.clone(), "Modes"),
-        modes_item(config.modes, &theme),
+        modes_item(config.modes.clone(), &theme),
+        settings_hint_text(theme.clone(), "Search Directories"),
+        search_dirs_item(&theme, config.search_dirs.clone()),
+        Space::new().height(30).into(),
+        settings_hint_text(theme.clone(), "Shell commands"),
+        shell_commands_item(config.shells.clone(), theme.clone()),
         Row::from_iter([
             savebutton(theme.clone()),
             default_button(theme.clone()),
+            copy_config_button(config),
             wiki_button(theme.clone()),
         ])
         .spacing(5)
@@ -423,18 +462,34 @@ fn default_button(theme: Theme) -> Element<'static, Message> {
 
 fn wiki_button(theme: Theme) -> Element<'static, Message> {
     Button::new(
-        Text::new("Open the wiki")
+        Text::new("Open file")
             .align_x(Alignment::Center)
             .width(Length::Fill)
             .font(theme.font()),
     )
     .style(move |_, _| settings_save_button_style(&theme))
     .width(Length::Fill)
-    .on_press(Message::RunFunction(
-        crate::commands::Function::OpenWebsite(
-            "https://github.com/RustCastLabs/rustcast/wiki".to_string(),
+    .on_press(Message::RunFunction(crate::commands::Function::OpenApp(
+        std::env::var("HOME").unwrap_or("".to_string()) + "/.config/rustcast/config.toml",
+    )))
+    .into()
+}
+
+fn copy_config_button(config: Box<Config>) -> Element<'static, Message> {
+    let theme = config.theme.clone();
+    Button::new(
+        Text::new("Copy config")
+            .align_x(Alignment::Center)
+            .width(Length::Fill)
+            .font(theme.font()),
+    )
+    .style(move |_, _| settings_save_button_style(&theme))
+    .width(Length::Fill)
+    .on_press(Message::RunFunction(Function::CopyToClipboard(
+        crate::clipboard::ClipBoardContentType::Text(
+            toml::to_string(&config).unwrap_or("".to_string()),
         ),
-    ))
+    )))
     .into()
 }
 
@@ -540,6 +595,47 @@ fn aliases_item(aliases: HashMap<String, String>, theme: &Theme) -> Element<'sta
     .into()
 }
 
+fn search_dirs_item(theme: &Theme, search_dirs: Vec<String>) -> Element<'static, Message> {
+    let theme_clone = theme.clone();
+    let search_dirs = search_dirs.clone();
+    Column::from_iter([
+        container(
+            Column::from_iter(search_dirs.iter().map(|dir| {
+                let theme_clone_2 = theme.clone();
+                let directory = dir.clone();
+                container(
+                    Row::from_iter([
+                        dir_picker_button(directory, dir, theme_clone.clone()).into(),
+                        Button::new("Delete")
+                            .on_press(Message::SetConfig(SetConfigFields::SearchDirs(
+                                Editable::Delete(dir.clone()),
+                            )))
+                            .style(move |_, _| delete_button_style(&theme_clone_2))
+                            .into(),
+                    ])
+                    .spacing(10)
+                    .align_y(Alignment::Center),
+                )
+                .width(Length::Fill)
+                .align_x(Alignment::Center)
+                .into()
+            }))
+            .spacing(10),
+        )
+        .height(Length::Fill)
+        .width(Length::Fill)
+        .align_x(Alignment::Center)
+        .align_y(Alignment::Center)
+        .into(),
+        dir_adder_button("+", theme.to_owned()).into(),
+    ])
+    .spacing(10)
+    .height(Length::Fill)
+    .width(Length::Fill)
+    .align_x(Alignment::Center)
+    .into()
+}
+
 fn text_input_cell(text: String, theme: &Theme, placeholder: &str) -> TextInput<'static, Message> {
     text_input(placeholder, &text)
         .font(theme.font())
@@ -609,4 +705,213 @@ fn modes_item(modes: HashMap<String, String>, theme: &Theme) -> Element<'static,
     .width(Length::Fill)
     .align_x(Alignment::Center)
     .into()
+}
+
+fn dir_picker_button(directory: String, dir: &str, theme: Theme) -> Button<'static, Message> {
+    let home = std::env::var("HOME").unwrap_or("/".to_string());
+    Button::new(Text::new(dir.to_owned().replace(&home, "~")))
+        .on_press_with(move || {
+            rfd::FileDialog::new()
+                .set_directory(home.clone())
+                .set_can_create_directories(false)
+                .pick_folder()
+                .map(|path| {
+                    let new = path.to_str().unwrap_or("").to_string();
+                    Message::SetConfig(SetConfigFields::SearchDirs(Editable::Update {
+                        old: directory.clone(),
+                        new,
+                    }))
+                })
+                .unwrap_or(Message::SetConfig(SetConfigFields::SearchDirs(
+                    Editable::Update {
+                        old: directory.clone(),
+                        new: directory.clone(),
+                    },
+                )))
+        })
+        .style(move |_, _| settings_add_button_style(&theme.clone()))
+}
+
+fn dir_adder_button(dir: &str, theme: Theme) -> Button<'static, Message> {
+    Button::new(Text::new(dir.to_owned()))
+        .on_press_with(move || {
+            rfd::FileDialog::new()
+                .set_directory(std::env::var("HOME").unwrap_or("/".to_string()))
+                .set_can_create_directories(false)
+                .pick_folder()
+                .map(|path| {
+                    let new = path.to_str().unwrap_or("").to_string();
+                    Message::SetConfig(SetConfigFields::SearchDirs(Editable::Create(new)))
+                })
+                .unwrap_or(Message::SetConfig(SetConfigFields::SearchDirs(
+                    Editable::Create(String::new()),
+                )))
+        })
+        .style(move |_, _| settings_add_button_style(&theme.clone()))
+}
+
+fn shell_commands_item(shells: Vec<Shelly>, theme: Theme) -> Element<'static, Message> {
+    let mut col =
+        Column::from_iter(shells.iter().map(|x| x.editable_render(theme.clone()))).spacing(30);
+
+    let theme_clone = theme.clone();
+
+    col = col
+        .push(
+            Button::new(
+                Text::new("+")
+                    .align_x(Alignment::Center)
+                    .align_y(Alignment::Center),
+            )
+            .style(move |_, _| settings_add_button_style(&theme_clone.clone()))
+            .on_press(Message::SetConfig(SetConfigFields::ShellCommands(
+                Editable::Create(Shelly::default()),
+            ))),
+        )
+        .width(Length::Fill)
+        .align_x(Alignment::Center);
+
+    col.into()
+}
+
+impl Shelly {
+    pub fn editable_render(&self, theme: Theme) -> Element<'static, Message> {
+        let shell = self.to_owned();
+        Column::from_iter([
+            tuple_row(
+                shellcommand_hint_text(theme.clone(), "Display name"),
+                text_input_cell(self.alias.clone(), &theme, "Display Name")
+                    .on_input({
+                        let shell = shell.clone();
+                        move |input| {
+                            let old = shell.clone();
+                            let mut new = old.clone();
+                            new.alias = input;
+                            Message::SetConfig(SetConfigFields::ShellCommands(Editable::Update {
+                                old,
+                                new,
+                            }))
+                        }
+                    })
+                    .into(),
+            )
+            .into(),
+            tuple_row(
+                shellcommand_hint_text(theme.clone(), "Search name"),
+                text_input_cell(self.alias_lc.clone(), &theme, "Search Name")
+                    .on_input({
+                        let shell = shell.clone();
+                        move |input| {
+                            let old = shell.clone();
+                            let mut new = old.clone();
+                            new.alias_lc = input;
+                            Message::SetConfig(SetConfigFields::ShellCommands(Editable::Update {
+                                old,
+                                new,
+                            }))
+                        }
+                    })
+                    .into(),
+            )
+            .into(),
+            tuple_row(
+                shellcommand_hint_text(theme.clone(), "Command"),
+                text_input_cell(self.command.clone(), &theme, "Command")
+                    .on_input({
+                        let shell = shell.clone();
+                        move |input| {
+                            let old = shell.clone();
+                            let mut new = old.clone();
+                            new.command = input;
+                            Message::SetConfig(SetConfigFields::ShellCommands(Editable::Update {
+                                old,
+                                new,
+                            }))
+                        }
+                    })
+                    .into(),
+            )
+            .into(),
+            tuple_row(
+                shellcommand_hint_text(theme.clone(), "Icon File"),
+                text_input_cell(
+                    self.icon_path.clone().unwrap_or("".to_string()),
+                    &theme,
+                    "Icon path",
+                )
+                .on_input({
+                    let shell = shell.clone();
+                    move |input| {
+                        let old = shell.clone();
+                        let mut new = old.clone();
+                        new.icon_path = if input.is_empty() { None } else { Some(input) };
+                        Message::SetConfig(SetConfigFields::ShellCommands(Editable::Update {
+                            old,
+                            new,
+                        }))
+                    }
+                })
+                .into(),
+            )
+            .into(),
+            tuple_row(
+                shellcommand_hint_text(theme.clone(), "Hotkey"),
+                text_input_cell(
+                    self.hotkey.clone().unwrap_or("".to_string()),
+                    &theme,
+                    "Hotkey",
+                )
+                .on_input({
+                    let shell = shell.clone();
+                    move |input| {
+                        let old = shell.clone();
+                        let mut new = old.clone();
+                        new.hotkey = Some(input);
+                        Message::SetConfig(SetConfigFields::ShellCommands(Editable::Update {
+                            old,
+                            new,
+                        }))
+                    }
+                })
+                .into(),
+            )
+            .into(),
+            tuple_row(
+                Button::new("Delete")
+                    .on_press(Message::SetConfig(SetConfigFields::ShellCommands(
+                        Editable::Delete(self.clone()),
+                    )))
+                    .style({
+                        let theme = theme.clone();
+                        move |_, _| delete_button_style(&theme)
+                    })
+                    .into(),
+                notice_item(theme.clone(), "Icon path and hotkey are optional"),
+            )
+            .into(),
+        ])
+        .spacing(10)
+        .height(Length::Fill)
+        .width(Length::Fill)
+        .into()
+    }
+}
+
+fn tuple_row(
+    left: Element<'static, Message>,
+    right: Element<'static, Message>,
+) -> Row<'static, Message> {
+    Row::from_iter([left, right])
+        .spacing(10)
+        .width(Length::Fill)
+}
+
+fn shellcommand_hint_text(theme: Theme, text: impl ToString) -> Element<'static, Message> {
+    let text = text.to_string();
+
+    Text::new(text)
+        .font(theme.font())
+        .color(theme.text_color(0.7))
+        .width(WINDOW_WIDTH * 0.3)
+        .into()
 }

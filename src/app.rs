@@ -3,7 +3,7 @@ use std::collections::HashMap;
 
 use crate::app::apps::{App, AppCommand, ICNS_ICON};
 use crate::commands::Function;
-use crate::config::Config;
+use crate::config::{Config, MainPage, Shelly};
 use crate::debounce::DebouncePolicy;
 use crate::utils::icns_data_to_handle;
 use crate::{app::tile::ExtSender, clipboard::ClipBoardContentType};
@@ -82,6 +82,7 @@ pub enum Message {
     WriteConfig(bool),
     SaveRanking,
     LoadRanking,
+    ToggleFavouriteApp(String),
     UpdateAvailable,
     ResizeWindow(Id, f32),
     OpenWindow,
@@ -125,10 +126,11 @@ pub enum SetConfigFields {
     SearchUrl(String),
     HapticFeedback(bool),
     ShowMenubarIcon(bool),
-    AutoSuggest(bool),
+    SetPage(MainPage),
     Modes(Editable<(String, String)>),
     Aliases(Editable<(String, String)>),
-    SearchDirs(Editable<Vec<String>>),
+    SearchDirs(Editable<String>),
+    ShellCommands(Editable<Shelly>),
     DebounceDelay(u64),
     SetThemeFields(SetConfigThemeFields),
     SetBufferFields(SetConfigBufferFields),

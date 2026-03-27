@@ -1,6 +1,6 @@
 [package]
 name = "rustcast"
-version = "0.6.7"
+version = "0.7.2"
 edition = "2024"
 license = "MIT"
 description = "RustCast - Productivity app for macOS"
@@ -8,7 +8,6 @@ homepage = "https://rustcast.app"
 repository = "https://github.com/RustCastLabs/rustcast"
 
 [dependencies]
-anyhow = "1.0.100"
 arboard = "3.6.1"
 block2 = "0.6.2"
 emojis = "0.8.0"

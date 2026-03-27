@@ -32,6 +32,7 @@ use crate::app::{Message, Page, tile::Tile};
 use crate::calculator::Expr;
 use crate::commands::Function;
 use crate::config::Config;
+use crate::config::MainPage;
 use crate::debounce::DebouncePolicy;
 use crate::quit::get_open_apps;
 use crate::unit_conversion;
@@ -50,7 +51,7 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
             tile.focused = true;
             tile.visible = true;
 
-            if tile.page == Page::Main && tile.query_lc.is_empty() && tile.config.auto_suggest {
+            if tile.page == Page::Main && tile.query_lc.is_empty() {
                 window::latest()
                     .map(|x| x.unwrap())
                     .map(|id| Message::SearchQueryChanged(String::new(), id))
@@ -260,6 +261,13 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
                 Err(_) => return Task::none(),
             };
 
+            let update_apps_task = if tile.config.shells != new_config.shells {
+                info!("App Update required");
+                Task::done(Message::UpdateApps)
+            } else {
+                Task::none()
+            };
+
             if let Some(icon) = tile.tray_icon.as_mut() {
                 icon.set_visible(new_config.clone().show_trayicon)
                     .unwrap_or(());
@@ -279,7 +287,7 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
 
             tile.theme = new_config.theme.to_owned().into();
             tile.config = new_config;
-            Task::done(Message::LoadRanking)
+            Task::batch([Task::done(Message::LoadRanking), update_apps_task])
         }
 
         Message::KeyPressed(hk_id) => {
@@ -366,6 +374,10 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
 
         Message::RunFunction(command) => {
             command.execute(&tile.config);
+            let page_task = match tile.page {
+                Page::Settings => Task::done(Message::SwitchToPage(Page::Main)),
+                _ => Task::none(),
+            };
 
             let return_focus_task = match &command {
                 Function::OpenApp(_) | Function::GoogleSearch(_) => Task::none(),
@@ -379,6 +391,7 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
             window::latest()
                 .map(|x| x.unwrap())
                 .map(Message::HideWindow)
+                .chain(page_task)
                 .chain(Task::done(Message::ClearSearchQuery))
                 .chain(return_focus_task)
         }
@@ -421,6 +434,21 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
                     .map(|x| x.unwrap())
                     .map(move |x| Message::SearchQueryChanged(updated_query.clone(), x)),
             ])
+        }
+
+        Message::ToggleFavouriteApp(app_name) => {
+            let ranking = match tile.options.by_name.get(&app_name) {
+                None => return Task::none(),
+                Some(app) => {
+                    if app.ranking == -1 {
+                        0
+                    } else {
+                        -1
+                    }
+                }
+            };
+            tile.options.set_ranking(&app_name, ranking);
+            Task::none()
         }
 
         Message::UpdateApps => {
@@ -620,14 +648,16 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
                     final_config.aliases.insert(new.0, new.1);
                 }
                 SetConfigFields::SearchDirs(Editable::Create(dir)) => {
-                    final_config.search_dirs = dir
+                    if !final_config.search_dirs.contains(&dir) {
+                        final_config.search_dirs.push(dir);
+                    }
                 }
                 SetConfigFields::SearchDirs(Editable::Delete(dirs)) => {
                     final_config.search_dirs = final_config
                         .search_dirs
                         .iter()
                         .filter_map(|dir| {
-                            if !dirs.contains(dir) {
+                            if &dirs != dir {
                                 Some(dir.to_owned())
                             } else {
                                 None
@@ -636,12 +666,56 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
                         .collect();
                 }
                 SetConfigFields::SearchDirs(Editable::Update { old, new }) => {
-                    let _ = old;
-                    let _ = new;
+                    final_config.search_dirs = final_config
+                        .search_dirs
+                        .iter()
+                        .map(|dir| {
+                            if dir == &old {
+                                new.clone()
+                            } else {
+                                dir.to_owned()
+                            }
+                        })
+                        .collect();
                 }
+
+                SetConfigFields::ShellCommands(Editable::Create(shell_command)) => {
+                    if !final_config.shells.contains(&shell_command) {
+                        final_config.shells.push(shell_command);
+                    }
+                }
+
+                SetConfigFields::ShellCommands(Editable::Delete(shell_command)) => {
+                    final_config.shells = final_config
+                        .shells
+                        .iter()
+                        .filter_map(|shell| {
+                            if &shell_command != shell {
+                                Some(shell.to_owned())
+                            } else {
+                                None
+                            }
+                        })
+                        .collect();
+                }
+
+                SetConfigFields::ShellCommands(Editable::Update { old, new }) => {
+                    final_config.shells = final_config
+                        .shells
+                        .iter()
+                        .map(|shell| {
+                            if shell == &old {
+                                new.clone()
+                            } else {
+                                shell.to_owned()
+                            }
+                        })
+                        .collect();
+                }
+
                 SetConfigFields::SearchUrl(url) => final_config.search_url = url,
                 SetConfigFields::PlaceHolder(placeholder) => final_config.placeholder = placeholder,
-                SetConfigFields::AutoSuggest(status) => final_config.auto_suggest = status,
+                SetConfigFields::SetPage(page) => final_config.main_page = page,
                 SetConfigFields::DebounceDelay(delay) => final_config.debounce_delay = delay,
                 SetConfigFields::HapticFeedback(haptic_feedback) => {
                     final_config.haptic_feedback = haptic_feedback
@@ -670,8 +744,6 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
                 }
                 SetConfigFields::ToDefault => {
                     final_config = Config::default();
-                    final_config.shells = tile.config.shells.clone();
-                    final_config.search_dirs = tile.config.search_dirs.clone();
                 }
             };
 
@@ -826,8 +898,12 @@ fn execute_query(tile: &mut Tile, id: Id) -> Task<Message> {
         _ => {}
     }
 
-    if tile.page == Page::Main && tile.query_lc.is_empty() && tile.config.auto_suggest {
-        tile.results = tile.frequent_results();
+    if tile.page == Page::Main && tile.query_lc.is_empty() {
+        tile.results = match tile.config.main_page {
+            MainPage::FrequentlyUsed => tile.frequent_results(),
+            MainPage::Blank => vec![],
+            MainPage::Favourites => tile.options.get_favourites(),
+        };
         return resize_for_results_count(id, tile.results.len());
     }
 

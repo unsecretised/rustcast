@@ -2,7 +2,7 @@
 use crate::config::Theme as ConfigTheme;
 use iced::Shadow;
 use iced::border::Radius;
-use iced::widget::{button, checkbox, container, scrollable, slider};
+use iced::widget::{button, checkbox, container, radio, scrollable, slider};
 use iced::{Background, Border, Color, widget::text_input};
 
 /// Helper: mix base color with white (simple “tint”)
@@ -12,6 +12,7 @@ pub fn tint(mut c: Color, amount: f32) -> Color {
     c.b = c.b + (1.0 - c.b) * amount;
     c
 }
+
 /// Helper: apply alpha
 pub fn with_alpha(mut c: Color, a: f32) -> Color {
     c.a = a;
@@ -116,6 +117,16 @@ pub fn results_scrollbar_style(tile: &ConfigTheme) -> scrollable::Style {
             shadow: Shadow::default(),
             icon: Color::TRANSPARENT,
         },
+    }
+}
+
+pub fn settings_radio_button_style(theme: &ConfigTheme) -> radio::Style {
+    radio::Style {
+        background: Background::Color(Color::TRANSPARENT),
+        dot_color: theme.text_color(0.4),
+        border_width: 1.,
+        border_color: theme.text_color(0.7),
+        text_color: Some(theme.text_color(1.)),
     }
 }
 
