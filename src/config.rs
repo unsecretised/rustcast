@@ -184,6 +184,7 @@ pub struct Shelly {
     pub icon_path: Option<String>,
     pub alias: String,
     pub alias_lc: String,
+    pub hotkey: Option<String>,
 }
 
 impl ToApp for Shelly {
