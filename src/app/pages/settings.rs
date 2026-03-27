@@ -103,6 +103,16 @@ pub fn settings_page(config: Config) -> Element<'static, Message> {
     ]);
 
     let theme_clone = theme.clone();
+    let start_at_login = settings_item_row([
+        settings_hint_text(theme.clone(), "Start at login"),
+        checkbox(config.clone().start_at_login)
+            .style(move |_, _| settings_checkbox_style(&theme_clone))
+            .on_toggle(Message::ToggleAutoStartup)
+            .into(),
+        notice_item(theme.clone(), "If you want rustcast to start on login"),
+    ]);
+
+    let theme_clone = theme.clone();
     let haptic = Row::from_iter([
         settings_hint_text(theme.clone(), "Haptic feedback"),
         checkbox(config.clone().haptic_feedback)
@@ -394,6 +404,7 @@ pub fn settings_page(config: Config) -> Element<'static, Message> {
         placeholder_setting.into(),
         search.into(),
         debounce.into(),
+        start_at_login.into(),
         haptic.into(),
         tray_icon.into(),
         auto_suggest.into(),

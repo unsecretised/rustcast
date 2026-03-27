@@ -7,6 +7,22 @@ use iced::wgpu::rwh::WindowHandle;
 pub(super) use self::discovery::get_installed_apps;
 pub(super) use self::haptics::perform_haptic;
 
+use objc2_service_management::SMAppService;
+
+pub fn start_at_login() {
+    unsafe {
+        SMAppService::mainAppService().registerAndReturnError().ok();
+    }
+}
+
+pub fn stop_at_login() {
+    unsafe {
+        SMAppService::mainAppService()
+            .unregisterAndReturnError()
+            .ok();
+    }
+}
+
 /// This sets the activation policy of the app to Accessory, allowing rustcast to be visible ontop
 /// of fullscreen apps
 pub(super) fn set_activation_policy_accessory() {
