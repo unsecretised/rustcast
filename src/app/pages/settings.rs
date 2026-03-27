@@ -828,6 +828,24 @@ impl Shelly {
             )
             .into(),
             tuple_row(
+                shellcommand_hint_text(theme.clone(), "Hotkey"),
+                text_input_cell(self.hotkey.clone().unwrap_or("".to_string()), &theme, "Hotkey")
+                    .on_input({
+                        let shell = shell.clone();
+                        move |input| {
+                            let old = shell.clone();
+                            let mut new = old.clone();
+                            new.hotkey = Some(input);
+                            Message::SetConfig(SetConfigFields::ShellCommands(Editable::Update {
+                                old,
+                                new,
+                            }))
+                        }
+                    })
+                    .into(),
+            )
+            .into(),
+            tuple_row(
                 Button::new("Delete")
                     .on_press(Message::SetConfig(SetConfigFields::ShellCommands(
                         Editable::Delete(self.clone()),
@@ -837,7 +855,7 @@ impl Shelly {
                         move |_, _| delete_button_style(&theme)
                     })
                     .into(),
-                notice_item(theme.clone(), "Icon path is optional"),
+                notice_item(theme.clone(), "Icon path and hotkey are optional"),
             )
             .into(),
         ])
