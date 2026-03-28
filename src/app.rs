@@ -81,6 +81,7 @@ pub enum Editable<T> {
 pub enum Message {
     WriteConfig(bool),
     SaveRanking,
+    ToggleAutoStartup(bool),
     LoadRanking,
     ToggleFavouriteApp(String),
     UpdateAvailable,

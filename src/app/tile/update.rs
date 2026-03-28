@@ -34,6 +34,7 @@ use crate::commands::Function;
 use crate::config::Config;
 use crate::config::MainPage;
 use crate::debounce::DebouncePolicy;
+use crate::platform::macos::{start_at_login, stop_at_login};
 use crate::quit::get_open_apps;
 use crate::unit_conversion;
 use crate::utils::is_valid_url;
@@ -92,6 +93,17 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
             tile.sender = Some(sender.clone());
             if tile.config.show_trayicon {
                 tile.tray_icon = Some(menu_icon(tile.config.clone(), sender));
+            }
+            Task::none()
+        }
+
+        Message::ToggleAutoStartup(set_to) => {
+            if set_to {
+                start_at_login();
+                tile.config.start_at_login = true
+            } else {
+                stop_at_login();
+                tile.config.start_at_login = false
             }
             Task::none()
         }
