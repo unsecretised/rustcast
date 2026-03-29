@@ -4,7 +4,6 @@
 use std::collections::HashMap;
 use std::fs;
 
-use global_hotkey::hotkey::HotKey;
 use iced::border::Radius;
 use iced::widget::scrollable::{Anchor, Direction, Scrollbar};
 use iced::widget::text::LineHeight;
@@ -35,7 +34,7 @@ use crate::{
 };
 
 /// Initialise the base window
-pub fn new(hotkey: HotKey, config: &Config) -> (Tile, Task<Message>) {
+pub fn new(hotkeys: Hotkeys, config: &Config) -> (Tile, Task<Message>) {
     let (id, open) = window::open(default_settings());
     info!("Opening window");
 
@@ -60,24 +59,6 @@ pub fn new(hotkey: HotKey, config: &Config) -> (Tile, Task<Message>) {
     options.par_sort_by_key(|x| x.display_name.len());
     let options = AppIndex::from_apps(options);
 
-    let mut shells_map = HashMap::new();
-    for shell in &config.shells {
-        if let Some(hk_str) = &shell.hotkey
-            && let Ok(hk) = hk_str.parse::<HotKey>()
-        {
-            shells_map.insert(hk.id, shell.command.clone());
-        }
-    }
-
-    let hotkeys = Hotkeys {
-        toggle: hotkey,
-        clipboard_hotkey: config
-            .clipboard_hotkey
-            .parse()
-            .unwrap_or("SUPER+SHIFT+C".parse().unwrap()),
-        shells: shells_map,
-    };
-
     let home = std::env::var("HOME").unwrap_or("/".to_string());
 
     let ranking = toml::from_str(
@@ -94,8 +75,8 @@ pub fn new(hotkey: HotKey, config: &Config) -> (Tile, Task<Message>) {
             focus_id: 0,
             results: vec![],
             options,
-            emoji_apps: AppIndex::from_apps(App::emoji_apps()),
             hotkeys,
+            emoji_apps: AppIndex::from_apps(App::emoji_apps()),
             visible: true,
             frontmost: None,
             focused: false,
