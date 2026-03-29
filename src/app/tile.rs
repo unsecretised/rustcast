@@ -5,12 +5,11 @@ pub mod update;
 use crate::app::apps::App;
 use crate::app::{ArrowKey, Message, Move, Page};
 use crate::clipboard::ClipBoardContentType;
-use crate::config::Config;
+use crate::config::{Config, Shelly};
 use crate::debounce::Debouncer;
 use crate::platform::default_app_paths;
+use crate::platform::macos::launching::Shortcut;
 
-use global_hotkey::hotkey::HotKey;
-use global_hotkey::{GlobalHotKeyEvent, HotKeyState};
 
 use iced::futures::SinkExt;
 use iced::futures::channel::mpsc::{Sender, channel};
@@ -191,9 +190,9 @@ pub struct Tile {
 /// Stores the toggle [`HotKey`] and the Clipboard [`HotKey`]
 #[derive(Clone, Debug)]
 pub struct Hotkeys {
-    pub toggle: HotKey,
-    pub clipboard_hotkey: HotKey,
-    pub shells: HashMap<u32, String>,
+    pub toggle: Shortcut,
+    pub clipboard_hotkey: Shortcut,
+    pub shells: HashMap<Shortcut, Shelly>,
 }
 
 impl Tile {
@@ -230,7 +229,6 @@ impl Tile {
             _ => None,
         });
         Subscription::batch([
-            Subscription::run(handle_hotkeys),
             Subscription::run(handle_hot_reloading),
             keyboard,
             Subscription::run(handle_recipient),
@@ -242,37 +240,34 @@ impl Tile {
                 if let keyboard::Event::KeyPressed { key, modifiers, .. } = event {
                     match key {
                         keyboard::Key::Named(Named::ArrowUp) => {
-                            return Some(Message::ChangeFocus(ArrowKey::Up, 1));
+                            Some(Message::ChangeFocus(ArrowKey::Up, 1))
                         }
                         keyboard::Key::Named(Named::ArrowLeft) => {
-                            return Some(Message::ChangeFocus(ArrowKey::Left, 1));
+                            Some(Message::ChangeFocus(ArrowKey::Left, 1))
                         }
                         keyboard::Key::Named(Named::ArrowRight) => {
-                            return Some(Message::ChangeFocus(ArrowKey::Right, 1));
+                            Some(Message::ChangeFocus(ArrowKey::Right, 1))
                         }
                         keyboard::Key::Named(Named::ArrowDown) => {
-                            return Some(Message::ChangeFocus(ArrowKey::Down, 1));
+                            Some(Message::ChangeFocus(ArrowKey::Down, 1))
                         }
                         keyboard::Key::Character(chr) => {
                             if modifiers.command() && chr.to_string() == "r" {
-                                return Some(Message::ReloadConfig);
+                                Some(Message::ReloadConfig)
                             } else if chr.to_string() == "p" && modifiers.control() {
-                                return Some(Message::ChangeFocus(ArrowKey::Up, 1));
+                                Some(Message::ChangeFocus(ArrowKey::Up, 1))
                             } else if chr.to_string() == "n" && modifiers.control() {
-                                return Some(Message::ChangeFocus(ArrowKey::Down, 1));
+                                Some(Message::ChangeFocus(ArrowKey::Down, 1))
                             } else {
-                                return Some(Message::FocusTextInput(Move::Forwards(
-                                    chr.to_string(),
-                                )));
+                                Some(Message::FocusTextInput(Move::Forwards(chr.to_string())))
                             }
                         }
-                        keyboard::Key::Named(Named::Enter) => return Some(Message::OpenFocused),
+                        keyboard::Key::Named(Named::Enter) => Some(Message::OpenFocused),
                         keyboard::Key::Named(Named::Backspace) => {
-                            return Some(Message::FocusTextInput(Move::Back));
+                            Some(Message::FocusTextInput(Move::Back))
                         }
-                        _ => {}
+                        _ => None,
                     }
-                    None
                 } else {
                     None
                 }
@@ -336,22 +331,6 @@ impl Tile {
             app.activateWithOptions(NSApplicationActivationOptions::ActivateIgnoringOtherApps);
         }
     }
-}
-
-/// This is the subscription function that handles hotkeys, e.g. for hiding / showing the window
-fn handle_hotkeys() -> impl futures::Stream<Item = Message> {
-    stream::channel(100, async |mut output| {
-        let receiver = GlobalHotKeyEvent::receiver();
-        loop {
-            info!("Hotkey received");
-            if let Ok(event) = receiver.recv()
-                && event.state == HotKeyState::Pressed
-            {
-                output.try_send(Message::KeyPressed(event.id)).unwrap();
-            }
-            tokio::time::sleep(Duration::from_millis(100)).await;
-        }
-    })
 }
 
 /// This is the subscription function that handles the change in clipboard history
@@ -629,7 +608,6 @@ fn handle_recipient() -> impl futures::Stream<Item = Message> {
             let abcd = recipient
                 .try_recv()
                 .map(async |msg| {
-                    info!("Sending a message");
                     output.send(msg).await.unwrap();
                 })
                 .ok();
