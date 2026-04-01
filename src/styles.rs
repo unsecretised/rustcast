@@ -80,18 +80,16 @@ pub fn favourite_button_style(
     status: button::Status,
     is_favourite: bool,
 ) -> button::Style {
-    let text_color = if is_favourite {
-        match status {
-            button::Status::Pressed => theme.text_color(0.8),
-            button::Status::Hovered => theme.text_color(0.9),
-            _ => theme.text_color(1.),
-        }
+    let (base, pressed, hovered) = if is_favourite {
+        (1.0, 0.8, 0.9)
     } else {
-        match status {
-            button::Status::Pressed => theme.text_color(1.),
-            button::Status::Hovered => theme.text_color(0.5),
-            _ => theme.text_color(0.1),
-        }
+        (0.1, 1.0, 0.5)
+    };
+
+    let text_color = match status {
+        button::Status::Pressed => theme.text_color(pressed),
+        button::Status::Hovered => theme.text_color(hovered),
+        _ => theme.text_color(base),
     };
 
     button::Style {
