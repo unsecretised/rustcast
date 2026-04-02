@@ -1,5 +1,6 @@
 //! This handles the update logic for the tile (AKA rustcast's main window)
 use std::cmp::min;
+use std::collections::HashMap;
 use std::fs;
 use std::io::Cursor;
 use std::thread;
@@ -34,6 +35,8 @@ use crate::commands::Function;
 use crate::config::Config;
 use crate::config::MainPage;
 use crate::debounce::DebouncePolicy;
+use crate::platform::macos::launching::Shortcut;
+use crate::platform::macos::launching::global_handler;
 use crate::platform::macos::{start_at_login, stop_at_login};
 use crate::quit::get_open_apps;
 use crate::unit_conversion;
@@ -91,6 +94,7 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
 
         Message::SetSender(sender) => {
             tile.sender = Some(sender.clone());
+            global_handler(sender.clone());
             if tile.config.show_trayicon {
                 tile.tray_icon = Some(menu_icon(tile.config.clone(), sender));
             }
@@ -274,6 +278,24 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
                 Err(_) => return Task::none(),
             };
 
+            if let Ok(hotkey) = Shortcut::parse(&new_config.clipboard_hotkey) {
+                tile.hotkeys.clipboard_hotkey = hotkey
+            }
+
+            if let Ok(hotkey) = Shortcut::parse(&new_config.toggle_hotkey) {
+                tile.hotkeys.toggle = hotkey
+            }
+
+            let mut shell_map = HashMap::new();
+
+            for shell in &new_config.shells {
+                if let Some(hotkey) = shell.hotkey.clone().and_then(|x| Shortcut::parse(&x).ok()) {
+                    shell_map.insert(hotkey, shell.clone());
+                }
+            }
+
+            tile.hotkeys.shells = shell_map;
+
             let update_apps_task = if tile.config.shells != new_config.shells {
                 info!("App Update required");
                 Task::done(Message::UpdateApps)
@@ -303,17 +325,21 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
             Task::batch([Task::done(Message::LoadRanking), update_apps_task])
         }
 
-        Message::KeyPressed(hk_id) => {
-            if let Some(cmd) = tile.hotkeys.shells.get(&hk_id) {
-                return Task::done(Message::RunFunction(Function::RunShellCommand(cmd.clone())));
+        Message::KeyPressed(shortcut) => {
+            if let Some(cmd) = tile.hotkeys.shells.get(&shortcut) {
+                return Task::done(Message::RunFunction(Function::RunShellCommand(
+                    cmd.command.clone(),
+                )));
             }
 
-            let is_clipboard_hotkey = tile.hotkeys.clipboard_hotkey.id == hk_id;
-            let is_open_hotkey = hk_id == tile.hotkeys.toggle.id;
+            let is_clipboard_hotkey = shortcut == tile.hotkeys.clipboard_hotkey;
+            let is_open_hotkey = shortcut == tile.hotkeys.toggle;
 
             let clipboard_page_task = if is_clipboard_hotkey {
+                info!("Switching to clipboard page");
                 Task::done(Message::SwitchToPage(Page::ClipboardHistory))
             } else if is_open_hotkey {
+                info!("Switching to main page");
                 Task::done(Message::SwitchToPage(Page::Main))
             } else {
                 Task::none()
@@ -484,6 +510,18 @@ pub fn handle_update(tile: &mut Tile, message: Message) -> Task<Message> {
             new_options.extend(App::basic_apps());
             new_options.par_sort_by_key(|x| x.display_name.len());
             tile.options = AppIndex::from_apps(new_options);
+
+            let mut shell_map = HashMap::new();
+
+            for shell in &tile.config.shells {
+                if let Some(has_hk) = &shell.hotkey
+                    && let Some(hotkey) = Shortcut::parse(has_hk).ok()
+                {
+                    shell_map.insert(hotkey, shell.clone());
+                }
+            }
+
+            tile.hotkeys.shells = shell_map;
 
             Task::none()
         }

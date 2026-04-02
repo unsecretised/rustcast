@@ -44,7 +44,7 @@ pub fn settings_page(config: Config) -> Element<'static, Message> {
             .width(Length::Fill)
             .style(move |_, _| settings_text_input_item_style(&hotkey_theme))
             .into(),
-        notice_item(theme.clone(), "Requires a restart"),
+        notice_item(theme.clone(), "Use \"+\" as a seperator"),
     ]);
 
     let cb_theme = theme.clone();
@@ -56,7 +56,7 @@ pub fn settings_page(config: Config) -> Element<'static, Message> {
             .width(Length::Fill)
             .style(move |_, _| settings_text_input_item_style(&cb_theme))
             .into(),
-        notice_item(theme.clone(), "Requires a restart"),
+        notice_item(theme.clone(), "Use \"+\" as a seperator"),
     ]);
 
     let placeholder_theme = theme.clone();

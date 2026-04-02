@@ -5,6 +5,7 @@ use crate::app::apps::{App, AppCommand, ICNS_ICON};
 use crate::commands::Function;
 use crate::config::{Config, MainPage, Shelly};
 use crate::debounce::DebouncePolicy;
+use crate::platform::macos::launching::Shortcut;
 use crate::utils::icns_data_to_handle;
 use crate::{app::tile::ExtSender, clipboard::ClipBoardContentType};
 use iced::time::Duration;
@@ -90,7 +91,7 @@ pub enum Message {
     OpenResult(u32),
     OpenToSettings,
     SearchQueryChanged(String, Id),
-    KeyPressed(u32),
+    KeyPressed(Shortcut),
     FocusTextInput(Move),
     HideWindow(Id),
     RunFunction(Function),
