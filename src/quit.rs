@@ -10,7 +10,7 @@ use crate::{
     platform::macos::discovery::icon_of_path_ns,
 };
 
-pub fn get_open_apps(store_icons: bool) -> Vec<App> {
+pub fn get_open_apps(store_icons: bool, prefix: &str, desc: &str) -> Vec<App> {
     let open_apps = NSWorkspace::sharedWorkspace().runningApplications();
 
     open_apps
@@ -40,13 +40,27 @@ pub fn get_open_apps(store_icons: bool) -> Vec<App> {
                 None
             };
 
+            // not my proudest moment but the code was becoming really messy, and i'm not sure how
+            // to clean it up in a nice way
+            let function = match prefix.to_lowercase().as_str() {
+                "quit" => Function::QuitApp(name.to_string()),
+                "open" => Function::OpenApp(
+                    app.bundleURL()
+                        .unwrap()
+                        .absoluteString()
+                        .unwrap()
+                        .to_string(),
+                ),
+                _ => panic!("Invalid prefix provided"),
+            };
+
             Some(App {
                 ranking: 0,
-                open_command: AppCommand::Function(Function::QuitApp(name.clone())),
-                display_name: format!("Quit {}", name),
+                open_command: AppCommand::Function(function),
+                display_name: format!("{} {}", prefix, name),
                 icons,
-                search_name: format!("quit {}", name.to_lowercase()),
-                desc: name.to_string(),
+                search_name: format!("{} {}", prefix.to_lowercase(), name.to_lowercase()),
+                desc: desc.to_string(),
             })
         })
         .collect()

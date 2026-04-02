@@ -960,7 +960,7 @@ fn execute_query(tile: &mut Tile, id: Id) -> Task<Message> {
     };
 
     let quittables = if tile.query_lc.starts_with("quit") {
-        get_open_apps(tile.config.theme.show_icons)
+        get_open_apps(tile.config.theme.show_icons, "Quit", "Quit open app")
     } else {
         vec![]
     };
@@ -1055,6 +1055,11 @@ fn execute_query(tile: &mut Tile, id: Id) -> Task<Message> {
             }
         }))
     }
+    tile.results.extend(get_open_apps(
+        tile.config.theme.show_icons,
+        "Open",
+        "Open focussed app",
+    ));
 
     if !tile.results.is_empty() {
         tile.results.par_sort_by_key(|x| -x.ranking);
